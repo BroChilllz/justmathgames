@@ -19,7 +19,7 @@
   (function() {
 
     var URLS = [
-      "https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/unblocked.html",
+      "https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/unblocked1.html",
     ];
 
     var frame = document.getElementById("f");
