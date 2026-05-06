@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Just Math Games</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b0f1a;
+  color: #e6e6ff;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(90deg, #3b3bff, #7a2cff);
+  box-shadow: 0 4px 20px rgba(122, 44, 255, 0.3);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+}
+
+.search {
+  width: 40%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 12, 25, 0.75);
+  color: #ffffff;
+  outline: none;
+  font-size: 14px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+}
+
+.search::placeholder {
+  color: rgba(230, 230, 255, 0.6);
+}
+
+.search:focus {
+  border: 1px solid rgba(122, 44, 255, 0.8);
+  box-shadow: 0 0 12px rgba(122, 44, 255, 0.4);
+  background: rgba(15, 18, 35, 0.95);
+}
+
+/* CATEGORIES */
+.categories {
+  display: flex;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #0f1426;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.categories button {
+  background: rgba(122, 44, 255, 0.15);
+  border: 1px solid rgba(122, 44, 255, 0.4);
+  color: #cfcfff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.categories button:hover {
+  background: rgba(122, 44, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+/* CARD */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(122, 44, 255, 0.25);
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: 0.25s;
+  backdrop-filter: blur(8px);
+}
+
+.card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 10px 30px rgba(122, 44, 255, 0.25);
+  border-color: rgba(122, 44, 255, 0.6);
+}
+
+.card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  filter: saturate(1.1) contrast(1.1);
+}
+
+.card-content {
+  padding: 10px;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* OVERLAY VIEW */
+#gameOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #070a14;
+  display: none;
+  flex-direction: column;
+  z-index: 9999;
+}
+
+.overlayBar {
+  background: linear-gradient(90deg, #3b3bff, #7a2cff);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.overlayBar button {
+  background: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#gameFrame {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+#showPlayer {
+  flex: 1;
+  width: 100%;
+  display: none;
+  background: black;
+}
+
+#showVideo {
+  width: 100%;
+  height: 100%;
+  background: black;
+}
+
+#episodeSelect {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
+#seasonSelect {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">JustMathGames</div>
+  <input class="search" placeholder="Search games and shows..." />
+</div>
+
+<!-- CATEGORIES -->
+<div class="categories">
+  <button onclick="filterCategory('All')">All</button>
+  <button onclick="filterCategory('Games')">Games</button>
+  <button onclick="filterCategory('Shows')">Shows</button>
+  <button onclick="filterCategory('Movies')">Movies</button>
+  <button onclick="filterCategory('Tools')">Tools</button>
+</div>
+
+<!-- GAME GRID -->
+<div class="grid">
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Five Nights at Epstein's.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Five Nights at Epstein's.png">
+    <div class="card-content">
+      <h3>Five Nights at Epstein's</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Hollow Knight.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Hollow Knight.png">
+    <div class="card-content">
+      <h3>Hollow Knight</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Hollow Knight Silksong.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Hollow Knight Silksong.png">
+    <div class="card-content">
+      <h3>Hollow Knight: Silksong</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/ULTRAKILL Prelude.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/ULTRAKILL.png">
+    <div class="card-content">
+      <h3>ULTRAKILL Prelude</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Territorial.io.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Territorial.io.png">
+    <div class="card-content">
+      <h3>Territorial.io</h3>
+      <p>Broken</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Balatro.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Balatro.png">
+    <div class="card-content">
+      <h3>Balatro</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Buckshot Roulette.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Buckshot Roulette.png">
+    <div class="card-content">
+      <h3>Buckshot Roulette</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Clover Pit.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Clover Pit.png">
+    <div class="card-content">
+      <h3>Clover Pit</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Time Shooter 3.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Time Shooter 3.png">
+    <div class="card-content">
+      <h3>Time Shooter 3</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Five Nights at Freddy's.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Five Nights at Freddy's.png">
+    <div class="card-content">
+      <h3>Five Nights at Freddy's</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Five Nights at Freddy's 2.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Five Nights at Freddy's 2.png">
+    <div class="card-content">
+      <h3>Five Nights at Freddy's 2</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Five Nights at Freddy's 3.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Five Nights at Freddy's 3.png">
+    <div class="card-content">
+      <h3>Five Nights at Freddy's 3</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Games/Five Nights at Freddy's 4.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Five Nights at Freddy's 4.png">
+    <div class="card-content">
+      <h3>Five Nights at Freddy's 4</h3>
+      <p>Games</p>
+    </div>
+  </div>
+
+  <div class="card" data-type="game" data-href="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/tools/Discord.html" data-category="Games">
+    <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Discord.png">
+    <div class="card-content">
+      <h3>Discord</h3>
+      <p>Tools</p>
+    </div>
+  </div>
+
+<div
+  class="card"
+  data-type="show"
+  data-category="Shows"
+  data-id="tt6741278"
+  data-title="Invincible"
+  data-seasons='{"1":8,"2":8,"3":8,"4":8}'
+>
+  <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Invincible.jpg">
+  <div class="card-content">
+    <h3>Invincible</h3>
+    <p>Shows</p>
+  </div>
+</div>
+
+<div
+  class="card"
+  data-type="show"
+  data-category="Shows"
+  data-id="tt0182576"
+  data-title="Family Guy"
+  data-seasons='{"1":7,"2":15,"3":21,"4":30,"5":18,"6":12,"7":16,"8":21,"9":18,"10":23,"11":22,"12":21,"13":18,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":15,"23":15}'
+>
+  <img src="https://cdn.jsdelivr.net/gh/brochilllz/justmathgames@latest/Assets/Family Guy.jpg">
+  <div class="card-content">
+    <h3>Family Guy</h3>
+    <p>Shows</p>
+  </div>
+</div>
+
+</div>
+
+<!-- OVERLAY -->
+<div id="gameOverlay">
+  <div class="overlayBar">
+    <button onclick="closeGame()">⬅ Back</button>
+
+    <select id="seasonSelect" onchange="changeSeason()" style="display:none;">
+    </select>
+    
+    <select id="episodeSelect" onchange="changeEpisode()" style="display:none;">
+    </select>
+  </div>
+
+  <!-- Games -->
+  <iframe id="gameFrame"></iframe>
+
+  <!-- Shows -->
+  <div id="showPlayer" style="display:none;">
+    <iframe
+      id="showFrame"
+      src=""
+      frameborder="0"
+      allowfullscreen
+      style="width:100%; height:100%; border:none;">
+    </iframe>
+  </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+const search = document.querySelector(".search");
+const cards = document.querySelectorAll(".card");
+const overlay = document.getElementById("gameOverlay");
+const frame = document.getElementById("gameFrame");
+const showPlayer = document.getElementById("showPlayer");
+const showFrame = document.getElementById("showFrame");
+const episodeSelect = document.getElementById("episodeSelect");
+const seasonSelect = document.getElementById("seasonSelect");
+
+let currentShowId = null;
+let currentSeasons = {};
+let currentSeason = 1;
+
+let currentCategory = "All";
+
+/* SEARCH */
+search.addEventListener("input", applyFilters);
+
+function applyFilters() {
+  const value = search.value.toLowerCase();
+
+  cards.forEach(card => {
+    const text = card.innerText.toLowerCase();
+
+    const matchesSearch = text.includes(value);
+    const matchesCategory =
+      currentCategory === "All" ||
+      card.dataset.category === currentCategory;
+
+    card.style.display =
+      (matchesSearch && matchesCategory) ? "" : "none";
+  });
+}
+
+/* CATEGORY FILTER */
+function filterCategory(category) {
+  currentCategory = category;
+  applyFilters();
+}
+
+/* CARD CLICK */
+cards.forEach(card => {
+  card.addEventListener("click", () => {
+    const type = card.dataset.type;
+
+    overlay.style.display = "flex";
+
+    if (type === "game") {
+      openGame(card.dataset.href);
+    }
+
+    if (type === "show") {
+      openShow(
+        JSON.parse(card.dataset.seasons),
+        card.dataset.id
+      );
+    }
+  });
+});
+
+/* OPEN GAME */
+function openGame(url) {
+  frame.style.display = "block";
+  showPlayer.style.display = "none";
+  episodeSelect.style.display = "none";
+
+  frame.src = url;
+}
+
+/* OPEN SHOW */
+
+function populateEpisodes(season) {
+  episodeSelect.innerHTML = "";
+
+  const episodeCount = currentSeasons[season];
+
+  for (let i = 1; i <= episodeCount; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = "Episode " + i;
+    episodeSelect.appendChild(option);
+  }
+
+  loadEpisode(1);
+}
+  
+function openShow(seasons, id) {
+  frame.style.display = "none";
+  showPlayer.style.display = "block";
+
+  seasonSelect.style.display = "block";
+  episodeSelect.style.display = "block";
+
+  currentSeasons = seasons;
+  currentShowId = id;
+
+  seasonSelect.innerHTML = "";
+
+  Object.keys(seasons).forEach(season => {
+    const option = document.createElement("option");
+    option.value = season;
+    option.textContent = "Season " + season;
+    seasonSelect.appendChild(option);
+  });
+
+  currentSeason = Number(Object.keys(seasons)[0]);
+  seasonSelect.value = currentSeason;
+
+  populateEpisodes(currentSeason);
+}
+
+/* LOAD EPISODE */
+function loadEpisode(episodeNumber) {
+  showFrame.src = `https://vidsrcme.ru/embed/tv?imdb=${currentShowId}&season=${currentSeason}&episode=${episodeNumber}`;
+}
+
+/* CHANGE EPISODE */
+function changeEpisode() {
+  loadEpisode(episodeSelect.value);
+}
+
+function changeSeason() {
+  currentSeason = Number(seasonSelect.value);
+  populateEpisodes(currentSeason);
+  episodeSelect.value = 1;
+}
+
+/* CLOSE */
+function closeGame() {
+  overlay.style.display = "none";
+
+  frame.src = "";
+  showFrame.src = "";
+
+  frame.style.display = "block";
+  showPlayer.style.display = "none";
+  seasonSelect.style.display = "none";
+  episodeSelect.style.display = "none";
+}
+</script>
+
+</body>
+</html>
