@@ -505,6 +505,10 @@ function openShow(seasons, id) {
 
 /* LOAD EPISODE */
 function loadEpisode(episodeNumber) {
+  if(episodeNumber==1){
+    showFrame.src = `https://player.autoembed.app/embed/tv/${currentShowId}/${currentSeason}/0`;
+    return;
+  }
   showFrame.src = `https://player.autoembed.app/embed/tv/${currentShowId}/${currentSeason}/${episodeNumber}`;
 }
 
