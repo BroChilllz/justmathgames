@@ -382,7 +382,6 @@ body {
   <!-- Shows -->
   <div id="showPlayer" style="display:none;">
     <iframe
-      id="showFrame"
       src=""
       frameborder="0"
       allowfullscreen
@@ -399,7 +398,7 @@ const cards = document.querySelectorAll(".card");
 const overlay = document.getElementById("gameOverlay");
 const frame = document.getElementById("gameFrame");
 const showPlayer = document.getElementById("showPlayer");
-const showFrame = document.getElementById("showFrame");
+const showFrame = showPlayer.querySelector("iframe");
 const episodeSelect = document.getElementById("episodeSelect");
 const seasonSelect = document.getElementById("seasonSelect");
 
