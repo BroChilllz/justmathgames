@@ -448,7 +448,8 @@ cards.forEach(card => {
     if (type === "show") {
       openShow(
         JSON.parse(card.dataset.seasons),
-        card.dataset.id
+        card.dataset.id,
+        card.dataset.player
       );
     }
   });
@@ -480,7 +481,7 @@ function populateEpisodes(season) {
   loadEpisode(1);
 }
   
-function openShow(seasons, id) {
+function openShow(seasons, id, player) {
   frame.style.display = "none";
   showPlayer.style.display = "block";
 
@@ -489,6 +490,7 @@ function openShow(seasons, id) {
 
   currentSeasons = seasons;
   currentShowId = id;
+  currentPlayer = player;
 
   seasonSelect.innerHTML = "";
 
