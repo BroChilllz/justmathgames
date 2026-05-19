@@ -330,6 +330,14 @@ body {
     </div>
   </div>
 
+  <div class="card" data-type="movie" data-href="Movies/The Super Mario Bros Movie.html" data-category="Movies">
+    <img src="Assets/The Super Mario Bros Movie.png">
+    <div class="card-content">
+      <h3>The Super Mario Bros Movie</h3>
+      <p>Movies</p>
+    </div>
+  </div>
+  
 <div
   class="card"
   data-type="show"
@@ -467,6 +475,10 @@ cards.forEach(card => {
         card.dataset.id,
         card.dataset.player
       );
+    }
+
+    if (type === "movie") {
+      openGame(card.dataset.href)
     }
   });
 });
