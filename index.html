@@ -329,14 +329,22 @@ body {
       <p>Tools</p>
     </div>
   </div>
-
-  <div class="card" data-type="movie" data-href="Movies/The Super Mario Bros Movie.html" data-category="Movies">
-    <img src="Assets/The Super Mario Bros Movie.png">
-    <div class="card-content">
-      <h3>The Super Mario Bros Movie</h3>
-      <p>Movies</p>
-    </div>
+  
+<div
+  class="card"
+  data-type="show"
+  data-category="Movies"
+  data-id="502356"
+  data-title="The Super Mario Bros Movie"
+  data-player=2
+  data-seasons='{"1":1}'
+>
+  <img src="Assets/The Super Mario Bros Movie.jpg">
+  <div class="card-content">
+    <h3>The Super Mario Bros Movie</h3>
+    <p>Movies</p>
   </div>
+</div>
   
 <div
   class="card"
@@ -344,7 +352,7 @@ body {
   data-category="Shows"
   data-id="95557"
   data-title="Invincible"
-  data-player=2
+  data-player=1
   data-seasons='{"1":8,"2":8,"3":8,"4":8}'
 >
   <img src="Assets/Invincible.jpg">
@@ -358,25 +366,9 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
-  data-id="95557"
-  data-title="Invincible Alt (Blocked)"
-  data-player=1
-  data-seasons='{"1":8,"2":8,"3":8,"4":8}'
->
-  <img src="Assets/Invincible.jpg">
-  <div class="card-content">
-    <h3>Invincible Alt (Blocked)</h3>
-    <p>Shows</p>
-  </div>
-</div>
-
-<div
-  class="card"
-  data-type="show"
-  data-category="Shows"
   data-id="1434"
   data-title="Family Guy"
-  data-player=2
+  data-player=1
   data-seasons='{"1":7,"2":15,"3":21,"4":30,"5":18,"6":12,"7":16,"8":21,"9":18,"10":23,"11":22,"12":21,"13":18,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":15,"23":15}'
 >
   <img src="Assets/Family Guy.jpg">
@@ -537,11 +529,18 @@ function openShow(seasons, id, player) {
 
 /* LOAD EPISODE */
 function loadEpisode(episodeNumber) {
-  if(currentPlayer==1){
-    showFrame.src = `https://movies.goadeddev.dpdns.org/tv/${currentShowId}?season=${currentSeason}&episode=${episodeNumber}`;
-  }else if(currentPlayer==2){
-    showFrame.src = `https://player.autoembed.app/embed/tv/${currentShowId}/${currentSeason}/${episodeNumber}`;
-  }
+  showFrame.src = `https://player.autoembed.app/embed/tv/${currentShowId}/${currentSeason}/${episodeNumber}
+  // if(currentPlayer==1){
+  //   showFrame.src = `https://vsembed.ru/embed/tv?tmdb=${currentShowId}&season=${currentSeason}&episode=${episodeNumber}`;
+  // }else if(currentPlayer==2){
+  //   showFrame.src = `https://vsembed.ru/embed/movie?tmdb=${currentShowId}`;
+  // }
+  // }else if(currentPlayer==3){
+  //   showFrame.src = `https://movies.goadeddev.dpdns.org/tv/${currentShowId}?season=${currentSeason}&episode=${episodeNumber}`;
+  // }
+  // }else if(currentPlayer==4){
+  //   showFrame.src = `https://player.autoembed.app/embed/tv/${currentShowId}/${currentSeason}/${episodeNumber}`;
+  // }
 }
 
 /* CHANGE EPISODE */
