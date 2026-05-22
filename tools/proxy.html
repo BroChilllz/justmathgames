@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Browse</title>
+  <style>
+    body { margin: 0; background: #0b0f1a; color: #e6e6ff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+    .bar { background: linear-gradient(90deg, #3b3bff, #7a2cff); padding: 10px; display: flex; gap: 10px; align-items: center; }
+    .bar input { flex: 1; padding: 8px 12px; border-radius: 8px; border: none; font-size: 14px; background: rgba(255,255,255,0.15); color: white; outline: none; }
+    .bar input::placeholder { color: rgba(255,255,255,0.6); }
+    .bar button { padding: 8px 14px; border-radius: 8px; border: none; background: white; cursor: pointer; font-weight: bold; }
+    .back-btn { background: rgba(255,255,255,0.15); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; font-size: 14px; }
+    iframe { flex: 1; border: none; width: 100%; }
+    #status { padding: 20px; text-align: center; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a class="back-btn" href="index.html">⬅ Back</a>
+    <input id="urlInput" placeholder="Enter URL or search term..." />
+    <button onclick="navigate()">Go</button>
+  </div>
+  <div id="status">Enter a URL or search above to start browsing.</div>
+  <iframe id="proxyFrame" style="display:none;"></iframe>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/scramjet@latest/dist/scramjet.js"></script>
+  <script>
+    const client = new ScramjetClient(window);
+    client.service('/scramjet.sw.js', '/scramjet/');
+
+    async function navigate() {
+      const input = document.getElementById('urlInput').value.trim();
+      if (!input) return;
+
+      let url = input;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        // treat as search if no dots, or wrap as https
+        if (!url.includes('.')) {
+          url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+        } else {
+          url = 'https://' + url;
+        }
+      }
+
+      await client.init();
+      const encoded = client.encodeUrl(url);
+      document.getElementById('status').style.display = 'none';
+      const frame = document.getElementById('proxyFrame');
+      frame.style.display = 'block';
+      frame.src = encoded;
+    }
+
+    document.getElementById('urlInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') navigate();
+    });
+  </script>
+</body>
+</html>
