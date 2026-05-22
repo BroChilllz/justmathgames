@@ -667,6 +667,290 @@ function closeGame() {
   seasonSelect.style.display = "none";
   episodeSelect.style.display = "none";
 }
+
+// ================================================================
+// CONFIG
+// ================================================================
+const BACKEND = 'https://justmathgames-backend.onrender.com'; // replace with your Render URL
+
+// ================================================================
+// USER ID — persists in localStorage so it survives domain swaps
+// ================================================================
+function getUserId() {
+  let id = localStorage.getItem('jmg_uid');
+  if (!id) {
+    id = 'user_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('jmg_uid', id);
+  }
+  return id;
+}
+
+// ================================================================
+// INDEXEDDB HELPERS
+// ================================================================
+async function getAllDatabases() {
+  if (!indexedDB.databases) return [];
+  return await indexedDB.databases();
+}
+
+function openDB(name, version) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, version);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve(req.result);
+  });
+}
+
+function getAllFromStore(db, storeName) {
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const keys = [];
+      const values = [];
+      let done = 0;
+      function tryResolve() {
+        if (++done < 2) return;
+        const result = {};
+        keys.forEach((k, i) => {
+          try { result[String(k)] = values[i]; } catch {}
+        });
+        resolve(result);
+      }
+      const keyReq = store.getAllKeys();
+      const valReq = store.getAll();
+      keyReq.onsuccess = () => { keys.push(...keyReq.result); tryResolve(); };
+      valReq.onsuccess = () => { values.push(...valReq.result); tryResolve(); };
+      keyReq.onerror = () => resolve({});
+      valReq.onerror = () => resolve({});
+    } catch {
+      resolve({});
+    }
+  });
+}
+
+async function scrapeIndexedDB() {
+  const snapshot = {};
+  try {
+    const dbs = await getAllDatabases();
+    for (const { name, version } of dbs) {
+      if (!name) continue;
+      try {
+        const db = await openDB(name, version);
+        const storeNames = Array.from(db.objectStoreNames);
+        const dbSnap = {};
+        for (const storeName of storeNames) {
+          dbSnap[storeName] = await getAllFromStore(db, storeName);
+        }
+        snapshot[name] = dbSnap;
+        db.close();
+      } catch {
+        // skip DBs we can't open
+      }
+    }
+  } catch {}
+  return snapshot;
+}
+
+function writeAllToStore(db, storeName, records) {
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const entries = Object.entries(records);
+      if (entries.length === 0) { resolve(); return; }
+      let pending = entries.length;
+      for (const [key, value] of entries) {
+        let req;
+        try {
+          req = store.put(value, key);
+        } catch {
+          try { req = store.put(value); }
+          catch { if (!--pending) resolve(); continue; }
+        }
+        req.onsuccess = () => { if (!--pending) resolve(); };
+        req.onerror   = () => { if (!--pending) resolve(); };
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror    = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+async function restoreIndexedDB(snapshot) {
+  for (const [dbName, stores] of Object.entries(snapshot)) {
+    try {
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(dbName);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror   = () => reject(req.error);
+        req.onupgradeneeded = (e) => {
+          const newDb = e.target.result;
+          for (const storeName of Object.keys(stores)) {
+            if (!newDb.objectStoreNames.contains(storeName)) {
+              newDb.createObjectStore(storeName);
+            }
+          }
+        };
+      });
+      for (const [storeName, records] of Object.entries(stores)) {
+        if (db.objectStoreNames.contains(storeName)) {
+          await writeAllToStore(db, storeName, records);
+        }
+      }
+      db.close();
+    } catch {
+      // skip DBs we can't restore
+    }
+  }
+}
+
+// ================================================================
+// COMBINED SCRAPE (localStorage + IndexedDB)
+// ================================================================
+async function scrapeAllSaves() {
+  const localSaves = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('jmg_')) {
+      try { localSaves[key] = localStorage.getItem(key); } catch {}
+    }
+  }
+  const idbSaves = await scrapeIndexedDB();
+  return { localSaves, idbSaves };
+}
+
+// ================================================================
+// BACKUP
+// ================================================================
+async function backupSavesToBackend() {
+  const { localSaves, idbSaves } = await scrapeAllSaves();
+  const totalKeys = Object.keys(localSaves).length + Object.keys(idbSaves).length;
+  if (totalKeys === 0) return;
+  try {
+    await fetch(`${BACKEND}/user/${getUserId()}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameSaves: localSaves, idbSaves })
+    });
+    localStorage.setItem('jmg_lastBackup', new Date().toISOString());
+    console.log(`Backed up: ${Object.keys(localSaves).length} localStorage keys, ${Object.keys(idbSaves).length} IDB databases`);
+  } catch {
+    console.warn('Backup failed');
+  }
+}
+
+// ================================================================
+// RESTORE
+// ================================================================
+async function restoreSavesFromBackend() {
+  try {
+    const res = await fetch(`${BACKEND}/user/${getUserId()}`);
+    const data = await res.json();
+
+    // Restore localStorage
+    const localSaves = data.gameSaves || {};
+    let restoredLocal = 0;
+    for (const [key, value] of Object.entries(localSaves)) {
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, value);
+        restoredLocal++;
+      }
+    }
+
+    // Restore IndexedDB
+    const idbSaves = data.idbSaves || {};
+    await restoreIndexedDB(idbSaves);
+    const restoredIDB = Object.keys(idbSaves).length;
+
+    if (restoredLocal || restoredIDB) {
+      console.log(`Restored ${restoredLocal} localStorage keys, ${restoredIDB} IDB databases`);
+    }
+
+    return data;
+  } catch {
+    return { favorites: [], settings: {}, gameSaves: {}, idbSaves: {} };
+  }
+}
+
+// ================================================================
+// FAVORITES
+// ================================================================
+async function loadUserData() {
+  try {
+    const res = await fetch(`${BACKEND}/user/${getUserId()}`);
+    return await res.json();
+  } catch {
+    return { favorites: [], settings: {}, gameSaves: {}, idbSaves: {} };
+  }
+}
+
+async function toggleFavorite(gameName) {
+  const data = await loadUserData();
+  const favs = data.favorites || [];
+  const idx = favs.indexOf(gameName);
+  if (idx === -1) favs.push(gameName); else favs.splice(idx, 1);
+  await fetch(`${BACKEND}/user/${getUserId()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorites: favs })
+  });
+  return favs;
+}
+
+// ================================================================
+// CACHE (for beforeunload beacon — IDB reads are async so we
+// pre-cache every 2 min and use the last known snapshot on close)
+// ================================================================
+let cachedIdbSaves = {};
+
+async function refreshCache() {
+  const { idbSaves } = await scrapeAllSaves();
+  cachedIdbSaves = idbSaves;
+}
+
+// Backup + refresh cache every 2 minutes
+setInterval(async () => {
+  await backupSavesToBackend();
+  await refreshCache();
+}, 2 * 60 * 1000);
+
+// On page close — sendBeacon is sync so we use the cached IDB snapshot
+window.addEventListener('beforeunload', () => {
+  const localSaves = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('jmg_')) {
+      try { localSaves[key] = localStorage.getItem(key); } catch {}
+    }
+  }
+  const payload = JSON.stringify({ gameSaves: localSaves, idbSaves: cachedIdbSaves });
+  navigator.sendBeacon(
+    `${BACKEND}/user/${getUserId()}`,
+    new Blob([payload], { type: 'application/json' })
+  );
+});
+
+// ================================================================
+// INIT — runs on page load
+// ================================================================
+async function initUserData() {
+  const data = await restoreSavesFromBackend();
+  await refreshCache();
+
+  // Highlight favorited cards in gold
+  const favs = data.favorites || [];
+  document.querySelectorAll('.card').forEach(card => {
+    const name = card.querySelector('h3')?.textContent;
+    if (favs.includes(name)) card.style.borderColor = 'rgba(255, 200, 0, 0.7)';
+  });
+}
+
+initUserData();
+  
 </script>
 
 </body>
