@@ -1,25 +1,26 @@
-<!doctype html>
+<!DOCTYPE HTML>
 <html>
-  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
-  <link rel="shortcut icon" type="image/jpg" href="img/favicon.ico"/>
-	    <link href="https://fonts.googleapis.com/css2?family=Amaranth&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-  <body>
-		<header>
-			<img class="logo" src="img/logo2.png" alt="logo">
-   	  <h1>Welcome to the Flash Games Archive.</h1>
-      <nav>
-          <ul class="nav__links">
-						<button style="margin-right: 20px;" onclick="window.location.href='index.html'";">Home</button>
-							
-            <button onclick="window.location.href='info.html'";>Information</button>
-						
-          </nav>
-						</header>
-  <head>
-    <title>Henry Stickmin - Breaking The Bank</title>
-  </head>
-		<center>
-    	<embed src="Assets/'henry-stickmin_breaking-the-bank.swf"></embed>
-		</center>
-  </body>
+    <head>
+        <meta charset='utf8'>
+    </head>
+    <body>
+        <div id='ruffle'></div>
+        <script src='tools/ruffle.js'></script>
+        <script>
+var swfobject = {};
+
+swfobject.embedSWF = function(url, cont, width, height){
+    var ruffle = window.RufflePlayer.newest(),
+        player = Object.assign(document.getElementById(cont).appendChild(ruffle.createPlayer()), {
+            width: width,
+            height: height,
+            style: 'width: ' + width + 'px; height: ' + height + 'px',
+        });
+    
+    player.load({ url: url });
+}
+
+swfobject.embedSWF('henry-stickmin_breaking-the-bank.swf', 'ruffle', 500, 500);
+        </script>
+    </body>
+</html>
