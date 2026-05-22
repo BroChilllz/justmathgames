@@ -18,23 +18,32 @@
   <div class="bar">
     <a class="back-btn" href="index.html">⬅ Back</a>
     <input id="urlInput" placeholder="Enter URL or search term..." />
-    <button onclick="navigate()">Go</button>
+    <button onclick="go()">Go</button>
   </div>
   <div id="status">Enter a URL or search above to start browsing.</div>
   <iframe id="proxyFrame" style="display:none;"></iframe>
 
-  <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/scramjet@latest/dist/scramjet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@latest/dist/uv.bundle.js"></script>
+  <script src="/uv.config.js"></script>
   <script>
-    const client = new ScramjetClient(window);
-    client.service('/scramjet.sw.js', '/scramjet/');
+    async function registerSW() {
+      if (!navigator.serviceWorker) {
+        document.getElementById('status').textContent = 'Service workers are not supported in this browser.';
+        return;
+      }
+      try {
+        await navigator.serviceWorker.register('/uv.sw.js', { scope: '/uv/service/' });
+      } catch (e) {
+        console.error('SW registration failed:', e);
+      }
+    }
 
-    async function navigate() {
+    async function go() {
       const input = document.getElementById('urlInput').value.trim();
       if (!input) return;
 
       let url = input;
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        // treat as search if no dots, or wrap as https
         if (!url.includes('.')) {
           url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
         } else {
@@ -42,8 +51,9 @@
         }
       }
 
-      await client.init();
-      const encoded = client.encodeUrl(url);
+      await registerSW();
+
+      const encoded = __uv$config.prefix + __uv$config.encodeUrl(url);
       document.getElementById('status').style.display = 'none';
       const frame = document.getElementById('proxyFrame');
       frame.style.display = 'block';
@@ -51,8 +61,11 @@
     }
 
     document.getElementById('urlInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') navigate();
+      if (e.key === 'Enter') go();
     });
+
+    // Register SW on page load so it's ready
+    registerSW();
   </script>
 </body>
 </html>
