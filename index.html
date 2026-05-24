@@ -1029,8 +1029,7 @@ function toggleFullscreen() {
 
 document.addEventListener('fullscreenchange', () => {
   const isFs = !!document.fullscreenElement;
-  document.querySelector('.topbar').classList.toggle('hidden', isFs);
-  document.querySelector('.categories').classList.toggle('hidden', isFs);
+  document.querySelector('.overlayBar').classList.toggle('hidden', isFs);
   document.getElementById('fullscreenBtn').textContent = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
 });
 </script>
