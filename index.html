@@ -14,29 +14,24 @@ body {
 
 /* Fullscreen button */
 #fullscreenBtn {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 10000;
-  background: rgba(10, 12, 25, 0.85);
-  border: 1px solid rgba(122, 44, 255, 0.4);
-  color: #a78bfa;
-  border-radius: 10px;
-  padding: 8px 14px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 6px 12px;
   font-size: 13px;
   font-family: Arial, sans-serif;
   cursor: pointer;
-  backdrop-filter: blur(6px);
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 #fullscreenBtn:hover {
-  background: rgba(122, 44, 255, 0.2);
-  border-color: rgba(122, 44, 255, 0.8);
-  color: white;
+  background: rgba(255,255,255,0.28);
 }
 
-body.is-fullscreen .topbar,
-body.is-fullscreen .categories {
+.topbar.hidden {
+  display: none;
+}
+.categories.hidden {
   display: none;
 }
 
@@ -216,6 +211,7 @@ body.is-fullscreen .categories {
 <div class="topbar">
   <div class="logo">JustMathGames</div>
   <input class="search" placeholder="Search games and shows..." />
+  <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 </div>
 
 <!-- CATEGORIES -->
@@ -1037,7 +1033,8 @@ function toggleFullscreen() {
 
 document.addEventListener('fullscreenchange', () => {
   const isFs = !!document.fullscreenElement;
-  document.body.classList.toggle('is-fullscreen', isFs);
+  document.querySelector('.topbar').classList.toggle('hidden', isFs);
+  document.querySelector('.categories').classList.toggle('hidden', isFs);
   document.getElementById('fullscreenBtn').textContent = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
 });
 </script>
