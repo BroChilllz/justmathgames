@@ -113,6 +113,7 @@ body {
   cursor: pointer;
   transition: 0.25s;
   backdrop-filter: blur(8px);
+  position: relative;
 }
 
 .card:hover {
@@ -141,6 +142,21 @@ body {
   margin: 5px 0 0;
   font-size: 12px;
   opacity: 0.7;
+}
+
+.rating-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
 }
 
 /* OVERLAY VIEW */
@@ -465,7 +481,7 @@ body {
     </div>
   </div>
   
-<div class="card" data-type="file" data-href="Movies/Five Nights at Freddy's.html" data-category="Movies">
+<div class="card" data-type="file" data-href="Movies/Five Nights at Freddy's.html" data-category="Movies" data-rating="PG-13">
   <img src="Assets/Five Nights at Freddy's.png">
   <div class="card-content">
     <h3>Five Nights at Freddy's</h3>
@@ -473,7 +489,7 @@ body {
   </div>
 </div>
   
-<div class="card" data-type="file" data-href="Movies/Titanic.html" data-category="Movies">
+<div class="card" data-type="file" data-href="Movies/Titanic.html" data-category="Movies" data-rating="PG-13">
   <img src="Assets/Titanic.png">
   <div class="card-content">
     <h3>Titanic</h3>
@@ -481,7 +497,7 @@ body {
   </div>
 </div>
   
-<div class="card" data-type="file" data-href="Movies/A Minecraft Movie.html" data-category="Movies">
+<div class="card" data-type="file" data-href="Movies/A Minecraft Movie.html" data-category="Movies" data-rating="PG">
   <img src="Assets/A Minecraft Movie.jpeg">
   <div class="card-content">
     <h3>A Minecraft Movie</h3>
@@ -489,7 +505,7 @@ body {
   </div>
 </div>
   
-<div class="card" data-type="file" data-href="Movies/The Super Mario Bros Movie.html" data-category="Movies">
+<div class="card" data-type="file" data-href="Movies/The Super Mario Bros Movie.html" data-category="Movies" data-rating="PG">
   <img src="Assets/The Super Mario Bros Movie.jpeg">
   <div class="card-content">
     <h3>The Super Mario Bros Movie</h3>
@@ -501,6 +517,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-MA"
   data-id="95557"
   data-title="Invincible"
   data-player=1
@@ -517,6 +534,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-MA"
   data-id="105248"
   data-title="Cyberpunk Edgerunners"
   data-player=1
@@ -533,6 +551,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-14"
   data-id="31911"
   data-title="Fullmetal Alchemist Brotherhood"
   data-player=1
@@ -549,6 +568,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-MA"
   data-id="76479"
   data-title="The Boys"
   data-player=1
@@ -565,6 +585,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-MA"
   data-id="1396"
   data-title="Breaking Bad"
   data-player=1
@@ -581,6 +602,7 @@ body {
   class="card"
   data-type="show"
   data-category="Shows"
+  data-rating="TV-14"
   data-id="1434"
   data-title="Family Guy"
   data-player=1
@@ -629,6 +651,13 @@ const showPlayer = document.getElementById("showPlayer");
 const showFrame = showPlayer.querySelector("iframe");
 const episodeSelect = document.getElementById("episodeSelect");
 const seasonSelect = document.getElementById("seasonSelect");
+
+document.querySelectorAll('.card[data-rating]').forEach(card => {
+  const badge = document.createElement('span');
+  badge.className = 'rating-badge';
+  badge.textContent = card.dataset.rating;
+  card.appendChild(badge);
+});
 
 let currentShowId = null;
 let currentSeasons = {};
