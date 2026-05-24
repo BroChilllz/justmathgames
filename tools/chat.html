@@ -943,13 +943,11 @@
     const el = $('topbarRight');
     if (me) {
       el.innerHTML = `
-        <a href="index.html">← Back</a>
         <span class="username">${escHtml(me)}</span>
         <button class="btn-sm danger" onclick="logout()">Log out</button>
       `;
     } else {
       el.innerHTML = `
-        <a href="index.html">← Back</a>
         <button class="btn-sm" onclick="showAuthModal()">Sign Up / Log In</button>
       `;
     }
