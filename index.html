@@ -211,7 +211,6 @@ body {
 <div class="topbar">
   <div class="logo">JustMathGames</div>
   <input class="search" placeholder="Search games and shows..." />
-  <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 </div>
 
 <!-- CATEGORIES -->
@@ -568,12 +567,9 @@ body {
 <div id="gameOverlay">
   <div class="overlayBar">
     <button onclick="closeGame()">⬅ Back</button>
-
-    <select id="seasonSelect" onchange="changeSeason()" style="display:none;">
-    </select>
-    
-    <select id="episodeSelect" onchange="changeEpisode()" style="display:none;">
-    </select>
+    <select id="seasonSelect" onchange="changeSeason()" style="display:none;"></select>
+    <select id="episodeSelect" onchange="changeEpisode()" style="display:none;"></select>
+    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
   </div>
 
   <!-- Games -->
