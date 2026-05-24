@@ -3,264 +3,829 @@
 <head>
   <meta charset="UTF-8">
   <title>Chat – JustMathGames</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #0b0f1a; color: #e6e6ff; display: flex; flex-direction: column; height: 100vh; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .topbar {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 20px; flex-shrink: 0;
-      background: linear-gradient(90deg, #3b3bff, #7a2cff);
-      box-shadow: 0 4px 20px rgba(122,44,255,0.3);
+    :root {
+      --bg:       #080c14;
+      --surface:  #0e1422;
+      --surface2: #141c2e;
+      --border:   rgba(80,120,255,0.13);
+      --accent:   #4f6fff;
+      --accent2:  #7c3aff;
+      --green:    #22d3a5;
+      --red:      #f85a5a;
+      --yellow:   #f5c842;
+      --text:     #d4defc;
+      --muted:    rgba(180,200,255,0.35);
+      --sidebar-w: 260px;
     }
-    .topbar .logo { font-size: 20px; font-weight: bold; color: white; }
-    .topbar a { color: white; text-decoration: none; font-size: 13px; background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 8px; }
-    .topbar .user-info { font-size: 13px; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 10px; }
-    .topbar .user-info button { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
 
-    /* AUTH MODAL */
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .topbar .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .topbar .logo span { color: var(--accent2); }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .topbar-right a {
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .topbar-right a:hover { color: var(--text); }
+    .topbar-right .username {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .btn-sm {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-tab {
+      flex: 1;
+      padding: 11px 0;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .sidebar-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .sidebar-tab:hover:not(.active) { color: var(--text); }
+
+    .sidebar-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .sidebar-panel.active { display: flex; }
+
+    .sidebar-search {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-search input {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .sidebar-search input:focus { border-color: var(--accent); }
+
+    .sidebar-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+    .sidebar-list::-webkit-scrollbar { width: 4px; }
+    .sidebar-list::-webkit-scrollbar-thumb { background: rgba(79,111,255,0.2); border-radius: 2px; }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .sidebar-item:hover { background: var(--surface2); }
+    .sidebar-item.active {
+      background: rgba(79,111,255,0.08);
+      border-left-color: var(--accent);
+    }
+    .sidebar-item .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      font-family: 'Space Mono', monospace;
+    }
+    .sidebar-item .avatar.group {
+      border-radius: 8px;
+      color: var(--accent2);
+    }
+    .sidebar-item .item-info { flex: 1; min-width: 0; }
+    .sidebar-item .item-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sidebar-item .item-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .badge {
+      background: var(--red);
+      color: white;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .sidebar-action {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-full {
+      width: 100%;
+      padding: 8px;
+      border-radius: 7px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-full:hover { border-color: var(--accent); color: var(--accent); }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .empty-state .icon { font-size: 28px; margin-bottom: 4px; }
+
+    .req-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+    }
+    .req-item .req-name { flex: 1; font-size: 13px; }
+    .req-item .req-actions { display: flex; gap: 5px; }
+    .req-btn {
+      padding: 4px 9px;
+      border-radius: 5px;
+      border: none;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .req-btn.accept { background: rgba(34,211,165,0.15); color: var(--green); }
+    .req-btn.accept:hover { background: rgba(34,211,165,0.25); }
+    .req-btn.decline { background: rgba(248,90,90,0.12); color: var(--red); }
+    .req-btn.decline:hover { background: rgba(248,90,90,0.22); }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 14px 4px;
+    }
+
+    /* ── MAIN AREA ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .chat-header {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .chat-header .ch-left { display: flex; align-items: center; gap: 10px; }
+    .chat-header .ch-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .chat-header .ch-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .chat-header .ch-actions { display: flex; gap: 6px; }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .messages::-webkit-scrollbar { width: 5px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(79,111,255,0.2); border-radius: 3px; }
+
+    .msg-day {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 8px 0;
+      position: relative;
+    }
+    .msg-day::before, .msg-day::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 50px);
+      height: 1px;
+      background: var(--border);
+    }
+    .msg-day::before { left: 0; }
+    .msg-day::after { right: 0; }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      transition: background 0.1s;
+      max-width: 680px;
+    }
+    .msg:hover { background: rgba(255,255,255,0.02); }
+    .msg.own { align-self: flex-end; flex-direction: row-reverse; }
+    .msg .msg-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      font-family: 'Space Mono', monospace;
+      margin-top: 2px;
+    }
+    .msg.own .msg-avatar { color: var(--accent2); }
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      margin-bottom: 3px;
+    }
+    .msg.own .msg-meta { flex-direction: row-reverse; }
+    .msg-author {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .msg.own .msg-author { color: var(--accent2); }
+    .msg-time { font-size: 10px; color: var(--muted); }
+    .msg-text {
+      font-size: 14px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+    .msg:hover .msg-del {
+      opacity: 1;
+    }
+    .msg-del {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--red);
+      cursor: pointer;
+      font-size: 10px;
+      padding: 0 4px;
+      transition: opacity 0.15s;
+      align-self: flex-start;
+      margin-top: 5px;
+    }
+
+    .system-msg {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px;
+      font-style: italic;
+    }
+
+    .input-bar {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .input-bar textarea {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      resize: none;
+      outline: none;
+      max-height: 120px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .input-bar textarea:focus { border-color: var(--accent); }
+    .send-btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .send-btn:hover { opacity: 0.88; }
+    .send-btn:disabled { opacity: 0.35; cursor: default; }
+
+    .no-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .no-chat .big { font-size: 48px; }
+
+    .login-gate {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+    .login-gate h2 { font-size: 22px; color: var(--text); }
+    .login-gate p { color: var(--muted); font-size: 14px; }
+    .btn-primary {
+      padding: 11px 28px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    /* ── MODALS ── */
     .modal-bg {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-      display: flex; align-items: center; justify-content: center; z-index: 999;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      backdrop-filter: blur(3px);
     }
     .modal-bg.hidden { display: none; }
     .modal {
-      background: #131829; border: 1px solid rgba(122,44,255,0.35);
-      border-radius: 16px; padding: 30px; width: 340px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 360px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
     }
-    .modal h2 { font-size: 20px; margin-bottom: 20px; color: #a78bfa; }
+    .modal h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+    .modal label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
     .modal input {
-      width: 100%; padding: 10px 12px; border-radius: 8px;
-      border: 1px solid rgba(122,44,255,0.3); background: rgba(255,255,255,0.05);
-      color: #e6e6ff; font-size: 14px; margin-bottom: 12px; outline: none;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
     }
-    .modal input:focus { border-color: rgba(122,44,255,0.7); }
-    .modal button.primary {
-      width: 100%; padding: 10px; border-radius: 8px; border: none;
-      background: linear-gradient(90deg, #3b3bff, #7a2cff);
-      color: white; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px;
+    .modal input:focus { border-color: var(--accent); }
+    .modal .error {
+      color: var(--red);
+      font-size: 13px;
+      margin-bottom: 12px;
+      min-height: 18px;
     }
-    .modal button.primary:hover { opacity: 0.9; }
-    .modal .switch { text-align: center; font-size: 13px; opacity: 0.7; cursor: pointer; }
-    .modal .switch span { color: #a78bfa; text-decoration: underline; cursor: pointer; }
-    .modal .error { color: #f87171; font-size: 13px; margin-bottom: 10px; min-height: 18px; }
-    .modal .hint { font-size: 11px; opacity: 0.5; margin-top: -8px; margin-bottom: 12px; }
-    .availability { font-size: 11px; margin-top: -8px; margin-bottom: 12px; min-height: 16px; }
-    .availability.ok  { color: #4ade80; }
-    .availability.bad { color: #f87171; }
+    .modal .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: -10px;
+      margin-bottom: 14px;
+    }
+    .availability { font-size: 11px; margin-top: -10px; margin-bottom: 14px; min-height: 16px; }
+    .availability.ok  { color: var(--green); }
+    .availability.bad { color: var(--red); }
+    .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+    .modal-btns button { flex: 1; }
+    .btn-cancel {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+    .modal .switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; cursor: pointer; }
+    .modal .switch span { color: var(--accent); text-decoration: underline; cursor: pointer; }
 
-    /* CHAT AREA */
-    .chat-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; max-width: 800px; width: 100%; margin: 0 auto; padding: 0 0 0 0; }
-    .messages {
-      flex: 1; overflow-y: auto; padding: 20px;
-      display: flex; flex-direction: column; gap: 10px;
+    /* group member tags */
+    .tag-input-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      margin-bottom: 14px;
+      min-height: 42px;
+      cursor: text;
     }
-    .messages::-webkit-scrollbar { width: 6px; }
-    .messages::-webkit-scrollbar-track { background: transparent; }
-    .messages::-webkit-scrollbar-thumb { background: rgba(122,44,255,0.3); border-radius: 3px; }
+    .tag-input-wrap input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      margin-bottom: 0;
+      padding: 0;
+      flex: 1;
+      min-width: 80px;
+    }
+    .tag {
+      background: rgba(79,111,255,0.15);
+      border: 1px solid rgba(79,111,255,0.25);
+      color: var(--accent);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tag button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0;
+      line-height: 1;
+    }
 
-    .msg {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(122,44,255,0.15);
-      border-radius: 10px; padding: 10px 14px; max-width: 75%; word-break: break-word;
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      :root { --sidebar-w: 200px; }
     }
-    .msg.own { align-self: flex-end; border-color: rgba(122,44,255,0.4); background: rgba(122,44,255,0.1); }
-    .msg .meta { font-size: 11px; opacity: 0.5; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .msg .meta .name { color: #a78bfa; font-weight: bold; opacity: 1; }
-    .msg .text { font-size: 14px; line-height: 1.5; }
-    .msg .delete-btn { background: none; border: none; color: #f87171; cursor: pointer; font-size: 11px; opacity: 0.6; padding: 0; }
-    .msg .delete-btn:hover { opacity: 1; }
-
-    .input-bar {
-      display: flex; gap: 10px; padding: 14px 20px;
-      background: #0f1426; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
-    }
-    .input-bar input {
-      flex: 1; padding: 10px 14px; border-radius: 10px;
-      border: 1px solid rgba(122,44,255,0.3); background: rgba(255,255,255,0.05);
-      color: #e6e6ff; font-size: 14px; outline: none;
-    }
-    .input-bar input:focus { border-color: rgba(122,44,255,0.7); }
-    .input-bar button {
-      padding: 10px 18px; border-radius: 10px; border: none;
-      background: linear-gradient(90deg, #3b3bff, #7a2cff);
-      color: white; font-weight: bold; cursor: pointer; font-size: 14px;
-    }
-    .input-bar button:hover { opacity: 0.9; }
-    .input-bar button:disabled { opacity: 0.4; cursor: default; }
-
-    .login-prompt {
-      text-align: center; padding: 16px; font-size: 14px; opacity: 0.6;
-      background: #0f1426; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
-    }
-    .login-prompt span { color: #a78bfa; cursor: pointer; text-decoration: underline; }
-
-    .system-msg { text-align: center; font-size: 12px; opacity: 0.4; padding: 4px 0; }
   </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="logo">JustMathGames – Chat</div>
-  <div class="user-info" id="userInfo">
-    <a href="index.html">⬅ Back</a>
+  <div class="logo">Just<span>Math</span>Games · Chat</div>
+  <div class="topbar-right" id="topbarRight">
+    <a href="index.html">← Back</a>
   </div>
 </div>
 
 <!-- AUTH MODAL -->
-<div class="modal-bg" id="modalBg">
+<div class="modal-bg" id="authModalBg">
   <div class="modal">
-    <h2 id="modalTitle">Sign Up</h2>
+    <h2 id="authTitle">Sign Up</h2>
     <div class="error" id="authError"></div>
-    <input type="text" id="authUsername" placeholder="Username" maxlength="20" autocomplete="off" />
+    <label>Username</label>
+    <input type="text" id="authUsername" placeholder="cool_name" maxlength="20" autocomplete="off">
     <div class="availability" id="usernameAvailability"></div>
-    <input type="password" id="authPassword" placeholder="Password" autocomplete="off" />
-    <div class="hint" id="passwordHint">At least 6 characters</div>
-    <button class="primary" id="authSubmit">Sign Up</button>
-    <div class="switch" id="authSwitch">Already have an account? <span onclick="switchMode()">Log in</span></div>
+    <label>Password</label>
+    <input type="password" id="authPassword" placeholder="At least 6 characters" autocomplete="off">
+    <div class="hint" id="passwordHint">Minimum 6 characters</div>
+    <div class="modal-btns">
+      <button class="btn-primary" id="authSubmit">Sign Up</button>
+    </div>
+    <div class="modal switch" id="authSwitch">Already have an account? <span onclick="switchAuthMode()">Log in</span></div>
   </div>
 </div>
 
-<!-- CHAT -->
-<div class="chat-wrap">
-  <div class="messages" id="messages">
-    <div class="system-msg">Loading messages...</div>
+<!-- ADD FRIEND MODAL -->
+<div class="modal-bg hidden" id="addFriendModal">
+  <div class="modal">
+    <h2>Add Friend</h2>
+    <div class="error" id="addFriendError"></div>
+    <label>Username</label>
+    <input type="text" id="addFriendInput" placeholder="their_username" maxlength="20" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('addFriendModal')">Cancel</button>
+      <button class="btn-primary" onclick="sendFriendRequest()">Send Request</button>
+    </div>
   </div>
-  <div class="input-bar" id="inputBar" style="display:none;">
-    <input type="text" id="msgInput" placeholder="Say something..." maxlength="500" />
-    <button id="sendBtn" onclick="sendMessage()">Send</button>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="modal-bg hidden" id="createGroupModal">
+  <div class="modal">
+    <h2>New Group</h2>
+    <div class="error" id="createGroupError"></div>
+    <label>Group Name</label>
+    <input type="text" id="groupNameInput" placeholder="My Group" maxlength="40" autocomplete="off">
+    <label>Add Members <span style="font-size:10px;opacity:0.5;">(press Enter)</span></label>
+    <div class="tag-input-wrap" onclick="document.getElementById('groupMemberInput').focus()">
+      <div id="groupMemberTags"></div>
+      <input type="text" id="groupMemberInput" placeholder="username" autocomplete="off">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('createGroupModal')">Cancel</button>
+      <button class="btn-primary" onclick="createGroup()">Create</button>
+    </div>
   </div>
-  <div class="login-prompt" id="loginPrompt">
-    <span onclick="showModal()">Sign up or log in</span> to chat
+</div>
+
+<!-- ADD MEMBER TO GROUP MODAL -->
+<div class="modal-bg hidden" id="addMemberModal">
+  <div class="modal">
+    <h2>Add Member</h2>
+    <div class="error" id="addMemberError"></div>
+    <label>Username</label>
+    <input type="text" id="addMemberInput" placeholder="username" maxlength="20" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('addMemberModal')">Cancel</button>
+      <button class="btn-primary" onclick="addGroupMember()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" onclick="switchSidebarTab('global')" id="tab-global">Global</div>
+      <div class="sidebar-tab" onclick="switchSidebarTab('friends')" id="tab-friends">Friends</div>
+      <div class="sidebar-tab" onclick="switchSidebarTab('dms')" id="tab-dms">DMs</div>
+      <div class="sidebar-tab" onclick="switchSidebarTab('groups')" id="tab-groups">Groups</div>
+    </div>
+
+    <!-- GLOBAL TAB -->
+    <div class="sidebar-panel active" id="panel-global">
+      <div class="sidebar-list" style="padding: 16px 14px 10px;">
+        <div style="font-size:13px; color: var(--muted); line-height:1.6;">
+          Public chat open to everyone.<br>Select it to chat here.
+        </div>
+      </div>
+      <div class="sidebar-list">
+        <div class="sidebar-item active" id="global-chat-item" onclick="openGlobalChat()">
+          <div class="avatar" style="border-radius:8px;">🌐</div>
+          <div class="item-info">
+            <div class="item-name">Global Chat</div>
+            <div class="item-sub">Everyone</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRIENDS TAB -->
+    <div class="sidebar-panel" id="panel-friends">
+      <div class="sidebar-search">
+        <input type="text" placeholder="Search friends..." id="friendSearch" oninput="renderFriendsList()">
+      </div>
+      <div class="sidebar-list" id="friendsList"></div>
+      <div class="sidebar-action">
+        <button class="btn-full" onclick="openAddFriendModal()">+ Add Friend</button>
+      </div>
+    </div>
+
+    <!-- DMS TAB -->
+    <div class="sidebar-panel" id="panel-dms">
+      <div class="sidebar-list" id="dmsList"></div>
+    </div>
+
+    <!-- GROUPS TAB -->
+    <div class="sidebar-panel" id="panel-groups">
+      <div class="sidebar-list" id="groupsList"></div>
+      <div class="sidebar-action">
+        <button class="btn-full" onclick="openCreateGroupModal()">+ New Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main">
+    <!-- shown when not logged in -->
+    <div class="login-gate" id="loginGate" style="display:none;">
+      <div style="font-size:48px;">💬</div>
+      <h2>Join the conversation</h2>
+      <p>Sign up or log in to chat, add friends, and create groups.</p>
+      <button class="btn-primary" onclick="showAuthModal()">Sign Up / Log In</button>
+    </div>
+    <!-- shown when logged in, no channel selected -->
+    <div class="no-chat" id="noChat">
+      <div class="big">💬</div>
+      <div>Pick a chat from the sidebar</div>
+    </div>
+    <!-- CHAT PANEL -->
+    <div id="chatPanel" style="display:none; flex-direction:column; flex:1; overflow:hidden; display:none;">
+      <div class="chat-header">
+        <div class="ch-left">
+          <div class="ch-title" id="chatTitle">Global Chat</div>
+          <div class="ch-sub" id="chatSub"></div>
+        </div>
+        <div class="ch-actions" id="chatActions"></div>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="input-bar" id="inputBar">
+        <textarea id="msgInput" rows="1" placeholder="Message..." maxlength="500"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-  const BACKEND = 'https://justmathgames-backend.onrender.com'; // your Render URL
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
 
-  let token = localStorage.getItem('jmg_token') || null;
-  let currentUsername = localStorage.getItem('jmg_username') || null;
-  let isLoginMode = false;
-  let checkTimeout = null;
+  let token     = localStorage.getItem('jmg_token') || null;
+  let me        = localStorage.getItem('jmg_username') || null;
+  let isLogin   = false;
+  let checkTo   = null;
 
-  // ================================================================
-  // AUTH UI
-  // ================================================================
+  // current chat state
+  let currentChat = null; // { type: 'global'|'dm'|'group', id, name }
+  let pollTimer   = null;
 
-  function showModal() {
-    document.getElementById('modalBg').classList.remove('hidden');
-    document.getElementById('authUsername').focus();
-  }
+  // local data cache
+  let friendData  = { friends: [], incoming: [], outgoing: [] };
+  let groupData   = [];
+  let groupMembers= {}; // groupId -> members array
 
-  function hideModal() {
-    document.getElementById('modalBg').classList.add('hidden');
-    document.getElementById('authError').textContent = '';
-  }
-
-  function switchMode() {
-    isLoginMode = !isLoginMode;
-    document.getElementById('modalTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
-    document.getElementById('authSubmit').textContent = isLoginMode ? 'Log In' : 'Sign Up';
-    document.getElementById('authSwitch').innerHTML = isLoginMode
-      ? 'No account? <span onclick="switchMode()">Sign up</span>'
-      : 'Already have an account? <span onclick="switchMode()">Log in</span>';
-    document.getElementById('passwordHint').style.display = isLoginMode ? 'none' : 'block';
-    document.getElementById('usernameAvailability').textContent = '';
-    document.getElementById('authError').textContent = '';
-  }
-
-  // Live username availability check
-  document.getElementById('authUsername').addEventListener('input', () => {
-    if (isLoginMode) return;
-    const val = document.getElementById('authUsername').value.trim();
-    const el = document.getElementById('usernameAvailability');
-    clearTimeout(checkTimeout);
-    if (val.length < 3) { el.textContent = ''; return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(val)) {
-      el.className = 'availability bad';
-      el.textContent = 'Letters, numbers, underscores only';
-      return;
-    }
-    el.textContent = 'Checking...';
-    el.className = 'availability';
-    checkTimeout = setTimeout(async () => {
-      const res = await fetch(`${BACKEND}/auth/check/${val}`);
-      const data = await res.json();
-      el.className = 'availability ' + (data.available ? 'ok' : 'bad');
-      el.textContent = data.available ? '✓ Available' : '✗ Already taken';
-    }, 400);
-  });
-
-  document.getElementById('authSubmit').addEventListener('click', async () => {
-    const username = document.getElementById('authUsername').value.trim();
-    const password = document.getElementById('authPassword').value;
-    const errEl = document.getElementById('authError');
-    errEl.textContent = '';
-
-    const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
-    const body = isLoginMode
-      ? { username, password }
-      : { username, password, userId: getUserId() };
-
-    try {
-      const res = await fetch(BACKEND + endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) { errEl.textContent = data.error; return; }
-
-      token = data.token;
-      currentUsername = data.username;
-      localStorage.setItem('jmg_token', token);
-      localStorage.setItem('jmg_username', currentUsername);
-      hideModal();
-      updateAuthUI();
-      loadMessages();
-    } catch {
-      errEl.textContent = 'Something went wrong, try again';
-    }
-  });
-
-  // Submit on Enter
-  document.getElementById('authPassword').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('authSubmit').click();
-  });
-
-  function logout() {
-    token = null;
-    currentUsername = null;
-    localStorage.removeItem('jmg_token');
-    localStorage.removeItem('jmg_username');
-    updateAuthUI();
-  }
-
-  function updateAuthUI() {
-    const userInfo = document.getElementById('userInfo');
-    const inputBar = document.getElementById('inputBar');
-    const loginPrompt = document.getElementById('loginPrompt');
-
-    if (currentUsername) {
-      userInfo.innerHTML = `
-        <a href="index.html">⬅ Back</a>
-        <span>Logged in as <b>${currentUsername}</b></span>
-        <button onclick="logout()">Log out</button>
-      `;
-      inputBar.style.display = 'flex';
-      loginPrompt.style.display = 'none';
-      document.getElementById('modalBg').classList.add('hidden');
-    } else {
-      userInfo.innerHTML = `<a href="index.html">⬅ Back</a>`;
-      inputBar.style.display = 'none';
-      loginPrompt.style.display = 'block';
-    }
-  }
+  const groupMemberList = []; // for create group modal
 
   // ================================================================
-  // CHAT
+  // HELPERS
   // ================================================================
+
+  function $(id) { return document.getElementById(id); }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatTime(ds) {
+    return new Date(ds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function avatarLetter(name) {
+    return (name || '?')[0].toUpperCase();
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function closeModal(id) {
+    $(id).classList.add('hidden');
+  }
+
+  function openModal(id) {
+    $(id).classList.remove('hidden');
+  }
 
   function getUserId() {
     let id = localStorage.getItem('jmg_uid');
@@ -271,82 +836,586 @@
     return id;
   }
 
-  function formatTime(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // ================================================================
+  // AUTH
+  // ================================================================
+
+  function showAuthModal() {
+    openModal('authModalBg');
+    $('authUsername').focus();
   }
 
-  function renderMessage(msg) {
-    const div = document.createElement('div');
-    div.className = 'msg' + (msg.username === currentUsername ? ' own' : '');
-    div.dataset.id = msg._id;
-
-    const deleteBtn = msg.username === currentUsername
-      ? `<button class="delete-btn" onclick="deleteMessage('${msg._id}', this)">✕ delete</button>`
-      : '';
-
-    div.innerHTML = `
-      <div class="meta">
-        <span class="name">${msg.username}</span>
-        <span>${formatTime(msg.createdAt)} ${deleteBtn}</span>
-      </div>
-      <div class="text">${escapeHtml(msg.text)}</div>
-    `;
-    return div;
+  function switchAuthMode() {
+    isLogin = !isLogin;
+    $('authTitle').textContent = isLogin ? 'Log In' : 'Sign Up';
+    $('authSubmit').textContent = isLogin ? 'Log In' : 'Sign Up';
+    $('authSwitch').innerHTML = isLogin
+      ? 'No account? <span onclick="switchAuthMode()">Sign up</span>'
+      : 'Already have an account? <span onclick="switchAuthMode()">Log in</span>';
+    $('passwordHint').style.display = isLogin ? 'none' : 'block';
+    $('usernameAvailability').textContent = '';
+    $('authError').textContent = '';
   }
 
-  function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  $('authUsername').addEventListener('input', () => {
+    if (isLogin) return;
+    const val = $('authUsername').value.trim();
+    const el  = $('usernameAvailability');
+    clearTimeout(checkTo);
+    if (val.length < 3) { el.textContent = ''; return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(val)) {
+      el.className = 'availability bad';
+      el.textContent = 'Letters, numbers, underscores only';
+      return;
+    }
+    el.textContent = 'Checking...';
+    el.className   = 'availability';
+    checkTo = setTimeout(async () => {
+      const res  = await fetch(`${BACKEND}/auth/check/${val}`);
+      const data = await res.json();
+      el.className    = 'availability ' + (data.available ? 'ok' : 'bad');
+      el.textContent  = data.available ? '✓ Available' : '✗ Already taken';
+    }, 400);
+  });
 
-  async function loadMessages() {
+  $('authSubmit').addEventListener('click', async () => {
+    const username = $('authUsername').value.trim();
+    const password = $('authPassword').value;
+    $('authError').textContent = '';
+    const endpoint = isLogin ? '/auth/login' : '/auth/register';
+    const body     = isLogin
+      ? { username, password }
+      : { username, password, userId: getUserId() };
     try {
-      const res = await fetch(`${BACKEND}/chat`);
-      const messages = await res.json();
-      const container = document.getElementById('messages');
-      container.innerHTML = '';
-      if (messages.length === 0) {
-        container.innerHTML = '<div class="system-msg">No messages yet. Be the first!</div>';
-        return;
-      }
-      messages.forEach(msg => container.appendChild(renderMessage(msg)));
-      container.scrollTop = container.scrollHeight;
+      const res  = await fetch(BACKEND + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) { $('authError').textContent = data.error; return; }
+      token = data.token;
+      me    = data.username;
+      localStorage.setItem('jmg_token', token);
+      localStorage.setItem('jmg_username', me);
+      closeModal('authModalBg');
+      initLoggedIn();
     } catch {
-      document.getElementById('messages').innerHTML =
-        '<div class="system-msg">Could not load messages.</div>';
+      $('authError').textContent = 'Something went wrong';
+    }
+  });
+
+  $('authPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('authSubmit').click();
+  });
+
+  function logout() {
+    token = null; me = null;
+    localStorage.removeItem('jmg_token');
+    localStorage.removeItem('jmg_username');
+    location.reload();
+  }
+
+  // ================================================================
+  // INIT
+  // ================================================================
+
+  function init() {
+    if (me && token) {
+      initLoggedIn();
+    } else {
+      // Show sidebar with global visible, but lock main to login gate
+      $('loginGate').style.display = 'flex';
+      $('noChat').style.display    = 'none';
+      updateTopbar();
+      // Still let them see global chat read-only
+      openGlobalChat();
     }
   }
 
-  async function sendMessage() {
-    const input = document.getElementById('msgInput');
-    const text = input.value.trim();
-    if (!text || !token) return;
+  async function initLoggedIn() {
+    updateTopbar();
+    $('loginGate').style.display = 'none';
+    await Promise.all([loadFriends(), loadGroups()]);
+    openGlobalChat();
+  }
 
-    const btn = document.getElementById('sendBtn');
+  function updateTopbar() {
+    const el = $('topbarRight');
+    if (me) {
+      el.innerHTML = `
+        <a href="index.html">← Back</a>
+        <span class="username">${escHtml(me)}</span>
+        <button class="btn-sm danger" onclick="logout()">Log out</button>
+      `;
+    } else {
+      el.innerHTML = `
+        <a href="index.html">← Back</a>
+        <button class="btn-sm" onclick="showAuthModal()">Sign Up / Log In</button>
+      `;
+    }
+  }
+
+  // ================================================================
+  // SIDEBAR TABS
+  // ================================================================
+
+  function switchSidebarTab(tab) {
+    ['global','friends','dms','groups'].forEach(t => {
+      $(`tab-${t}`).classList.toggle('active', t === tab);
+      $(`panel-${t}`).classList.toggle('active', t === tab);
+    });
+    if (tab === 'friends' && me) renderFriendsList();
+    if (tab === 'dms'     && me) renderDmsList();
+    if (tab === 'groups'  && me) renderGroupsList();
+  }
+
+  // ================================================================
+  // FRIENDS
+  // ================================================================
+
+  async function loadFriends() {
+    if (!token) return;
+    try {
+      const res  = await fetch(`${BACKEND}/friends`, { headers: { Authorization: `Bearer ${token}` } });
+      friendData = await res.json();
+      renderFriendsList();
+      renderDmsList();
+      // Update incoming badge
+      const inCount = friendData.incoming.length;
+      $('tab-friends').textContent = inCount > 0 ? `Friends (${inCount})` : 'Friends';
+    } catch {}
+  }
+
+  function renderFriendsList() {
+    const el     = $('friendsList');
+    const query  = ($('friendSearch')?.value || '').toLowerCase();
+    const { friends, incoming, outgoing } = friendData;
+
+    let html = '';
+
+    if (incoming.length) {
+      html += `<div class="section-label">Requests</div>`;
+      incoming.filter(u => u.toLowerCase().includes(query)).forEach(u => {
+        html += `
+          <div class="req-item">
+            <div class="avatar" style="width:30px;height:30px;font-size:11px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace;flex-shrink:0;">${avatarLetter(u)}</div>
+            <div class="req-name">${escHtml(u)}</div>
+            <div class="req-actions">
+              <button class="req-btn accept" onclick="respondFriendRequest('${u}','accept')">✓</button>
+              <button class="req-btn decline" onclick="respondFriendRequest('${u}','decline')">✕</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    if (outgoing.length) {
+      html += `<div class="section-label">Sent</div>`;
+      outgoing.filter(u => u.toLowerCase().includes(query)).forEach(u => {
+        html += `
+          <div class="sidebar-item">
+            <div class="avatar">${avatarLetter(u)}</div>
+            <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Pending...</div></div>
+            <button class="btn-sm danger" onclick="removeFriend('${u}')" title="Cancel request">✕</button>
+          </div>`;
+      });
+    }
+
+    if (friends.length) {
+      html += `<div class="section-label">Friends</div>`;
+      friends.filter(u => u.toLowerCase().includes(query)).forEach(u => {
+        const isActive = currentChat?.type === 'dm' && currentChat.id === u;
+        html += `
+          <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="openDmChat('${u}')">
+            <div class="avatar">${avatarLetter(u)}</div>
+            <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Friend</div></div>
+            <button class="btn-sm danger" onclick="event.stopPropagation();removeFriend('${u}')" title="Remove friend">✕</button>
+          </div>`;
+      });
+    }
+
+    if (!html) {
+      html = `<div class="empty-state"><div class="icon">👥</div><div>No friends yet.<br>Add someone!</div></div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function renderDmsList() {
+    const el = $('dmsList');
+    const { friends } = friendData;
+    if (!friends.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">💬</div><div>Add friends to DM them</div></div>`;
+      return;
+    }
+    el.innerHTML = friends.map(u => {
+      const isActive = currentChat?.type === 'dm' && currentChat.id === u;
+      return `
+        <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="openDmChat('${u}')">
+          <div class="avatar">${avatarLetter(u)}</div>
+          <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Direct Message</div></div>
+        </div>`;
+    }).join('');
+  }
+
+  function openAddFriendModal() {
+    if (!me) { showAuthModal(); return; }
+    $('addFriendError').textContent = '';
+    $('addFriendInput').value = '';
+    openModal('addFriendModal');
+    $('addFriendInput').focus();
+  }
+
+  async function sendFriendRequest() {
+    const to = $('addFriendInput').value.trim();
+    $('addFriendError').textContent = '';
+    if (!to) return;
+    try {
+      const res  = await fetch(`${BACKEND}/friends/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ to })
+      });
+      const data = await res.json();
+      if (!res.ok) { $('addFriendError').textContent = data.error; return; }
+      closeModal('addFriendModal');
+      await loadFriends();
+    } catch {
+      $('addFriendError').textContent = 'Something went wrong';
+    }
+  }
+
+  async function respondFriendRequest(from, action) {
+    try {
+      await fetch(`${BACKEND}/friends/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ from, action })
+      });
+      await loadFriends();
+    } catch {}
+  }
+
+  async function removeFriend(username) {
+    if (!confirm(`Remove ${username}?`)) return;
+    try {
+      await fetch(`${BACKEND}/friends/${username}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // If currently DMing this person, go back
+      if (currentChat?.type === 'dm' && currentChat.id === username) openGlobalChat();
+      await loadFriends();
+    } catch {}
+  }
+
+  // ================================================================
+  // GROUPS
+  // ================================================================
+
+  async function loadGroups() {
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND}/groups`, { headers: { Authorization: `Bearer ${token}` } });
+      groupData = await res.json();
+      renderGroupsList();
+    } catch {}
+  }
+
+  function renderGroupsList() {
+    const el = $('groupsList');
+    if (!groupData.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🏠</div><div>No groups yet.<br>Create one!</div></div>`;
+      return;
+    }
+    el.innerHTML = groupData.map(g => {
+      const isActive = currentChat?.type === 'group' && currentChat.id === g._id;
+      return `
+        <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="openGroupChat('${g._id}','${escHtml(g.name)}')">
+          <div class="avatar group">${avatarLetter(g.name)}</div>
+          <div class="item-info">
+            <div class="item-name">${escHtml(g.name)}</div>
+            <div class="item-sub">${g.members.length} member${g.members.length !== 1 ? 's' : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function openCreateGroupModal() {
+    if (!me) { showAuthModal(); return; }
+    $('createGroupError').textContent = '';
+    $('groupNameInput').value = '';
+    $('groupMemberTags').innerHTML = '';
+    $('groupMemberInput').value = '';
+    groupMemberList.length = 0;
+    openModal('createGroupModal');
+    $('groupNameInput').focus();
+  }
+
+  $('groupMemberInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const val = $('groupMemberInput').value.trim();
+      if (val && !groupMemberList.includes(val) && val !== me) {
+        groupMemberList.push(val);
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.innerHTML = `${escHtml(val)} <button onclick="removeGroupMemberTag('${val}',this.parentElement)">×</button>`;
+        $('groupMemberTags').appendChild(tag);
+      }
+      $('groupMemberInput').value = '';
+    }
+  });
+
+  function removeGroupMemberTag(name, tagEl) {
+    const idx = groupMemberList.indexOf(name);
+    if (idx > -1) groupMemberList.splice(idx, 1);
+    tagEl.remove();
+  }
+
+  async function createGroup() {
+    const name = $('groupNameInput').value.trim();
+    $('createGroupError').textContent = '';
+    if (!name) { $('createGroupError').textContent = 'Name required'; return; }
+    try {
+      const res  = await fetch(`${BACKEND}/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, members: [...groupMemberList] })
+      });
+      const data = await res.json();
+      if (!res.ok) { $('createGroupError').textContent = data.error; return; }
+      closeModal('createGroupModal');
+      await loadGroups();
+      openGroupChat(data._id, data.name);
+    } catch {
+      $('createGroupError').textContent = 'Something went wrong';
+    }
+  }
+
+  function openAddMemberModal() {
+    $('addMemberError').textContent = '';
+    $('addMemberInput').value = '';
+    openModal('addMemberModal');
+    $('addMemberInput').focus();
+  }
+
+  async function addGroupMember() {
+    const username = $('addMemberInput').value.trim();
+    $('addMemberError').textContent = '';
+    if (!username || !currentChat) return;
+    try {
+      const res  = await fetch(`${BACKEND}/groups/${currentChat.id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if (!res.ok) { $('addMemberError').textContent = data.error; return; }
+      closeModal('addMemberModal');
+      await loadGroups();
+      // refresh header
+      openGroupChat(currentChat.id, currentChat.name);
+    } catch {
+      $('addMemberError').textContent = 'Something went wrong';
+    }
+  }
+
+  async function leaveOrDeleteGroup() {
+    if (!currentChat || currentChat.type !== 'group') return;
+    const group = groupData.find(g => g._id === currentChat.id);
+    const isOwner = group?.owner === me;
+    const action = isOwner ? 'delete this group' : 'leave this group';
+    if (!confirm(`Are you sure you want to ${action}?`)) return;
+    try {
+      if (isOwner) {
+        await fetch(`${BACKEND}/groups/${currentChat.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await fetch(`${BACKEND}/groups/${currentChat.id}/members/${me}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      await loadGroups();
+      openGlobalChat();
+    } catch {}
+  }
+
+  // ================================================================
+  // CHAT PANEL
+  // ================================================================
+
+  function showChatPanel() {
+    $('noChat').style.display    = 'none';
+    $('loginGate').style.display = 'none';
+    const panel = $('chatPanel');
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    panel.style.flex = '1';
+    panel.style.overflow = 'hidden';
+  }
+
+  function openGlobalChat() {
+    clearPoll();
+    currentChat = { type: 'global' };
+    $('chatTitle').textContent = '🌐 Global Chat';
+    $('chatSub').textContent   = 'Public · Everyone';
+    $('chatActions').innerHTML = '';
+    // Update sidebar highlight
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    $('global-chat-item')?.classList.add('active');
+
+    if (!me) {
+      // show read-only global
+      showChatPanel();
+      $('inputBar').style.display = 'none';
+      loadAndRenderMessages();
+      return;
+    }
+    $('inputBar').style.display = 'flex';
+    showChatPanel();
+    loadAndRenderMessages();
+    pollTimer = setInterval(loadAndRenderMessages, 5000);
+  }
+
+  function openDmChat(username) {
+    clearPoll();
+    currentChat = { type: 'dm', id: username, name: username };
+    $('chatTitle').textContent = `💬 ${username}`;
+    $('chatSub').textContent   = 'Direct Message';
+    $('chatActions').innerHTML = `
+      <button class="btn-sm danger" onclick="removeFriend('${username}')">Remove Friend</button>
+    `;
+    $('inputBar').style.display = 'flex';
+    showChatPanel();
+    renderDmsList();
+    renderFriendsList();
+    loadAndRenderMessages();
+    pollTimer = setInterval(loadAndRenderMessages, 5000);
+  }
+
+  function openGroupChat(groupId, groupName) {
+    clearPoll();
+    currentChat = { type: 'group', id: groupId, name: groupName };
+    const group = groupData.find(g => g._id === groupId);
+    const isOwner = group?.owner === me;
+    $('chatTitle').textContent = `# ${groupName}`;
+    $('chatSub').textContent   = group ? `${group.members.length} members: ${group.members.join(', ')}` : '';
+    $('chatActions').innerHTML = `
+      ${isOwner ? `<button class="btn-sm" onclick="openAddMemberModal()">+ Add Member</button>` : ''}
+      <button class="btn-sm danger" onclick="leaveOrDeleteGroup()">${isOwner ? 'Delete' : 'Leave'}</button>
+    `;
+    $('inputBar').style.display = 'flex';
+    showChatPanel();
+    renderGroupsList();
+    loadAndRenderMessages();
+    pollTimer = setInterval(loadAndRenderMessages, 5000);
+  }
+
+  function clearPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  // ================================================================
+  // MESSAGES
+  // ================================================================
+
+  async function loadAndRenderMessages() {
+    if (!currentChat) return;
+    try {
+      let url, headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      if (currentChat.type === 'global') {
+        url = `${BACKEND}/chat`;
+      } else if (currentChat.type === 'dm') {
+        url = `${BACKEND}/dm/${currentChat.id}`;
+        if (!token) return;
+      } else if (currentChat.type === 'group') {
+        url = `${BACKEND}/groups/${currentChat.id}/messages`;
+        if (!token) return;
+      }
+
+      const res  = await fetch(url, { headers });
+      const msgs = await res.json();
+      if (!res.ok) return;
+
+      const container = $('messages');
+      const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+
+      renderMessages(msgs, container);
+
+      if (wasAtBottom) container.scrollTop = container.scrollHeight;
+    } catch {}
+  }
+
+  function renderMessages(msgs, container) {
+    if (msgs.length === 0) {
+      container.innerHTML = '<div class="system-msg">No messages yet. Say hello!</div>';
+      return;
+    }
+
+    let html = '';
+    let lastDate = '';
+
+    msgs.forEach(msg => {
+      const sender = msg.username || msg.from;
+      const isOwn  = sender === me;
+      const date   = new Date(msg.createdAt).toLocaleDateString([], { month:'short', day:'numeric' });
+      if (date !== lastDate) {
+        html += `<div class="msg-day">${date}</div>`;
+        lastDate = date;
+      }
+      const delBtn = isOwn
+        ? `<button class="msg-del" onclick="deleteMessage('${msg._id}',this)" title="Delete">✕</button>`
+        : '';
+      html += `
+        <div class="msg ${isOwn ? 'own' : ''}" data-id="${msg._id}">
+          <div class="msg-avatar">${avatarLetter(sender)}</div>
+          <div class="msg-body">
+            <div class="msg-meta">
+              <span class="msg-author">${escHtml(sender)}</span>
+              <span class="msg-time">${formatTime(msg.createdAt)}</span>
+            </div>
+            <div class="msg-text">${escHtml(msg.text)}</div>
+          </div>
+          ${delBtn}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+  }
+
+  async function sendMessage() {
+    const input = $('msgInput');
+    const text  = input.value.trim();
+    if (!text || !token || !currentChat) return;
+
+    const btn = $('sendBtn');
     btn.disabled = true;
-    input.value = '';
+    input.value  = '';
+    input.style.height = 'auto';
 
     try {
-      const res = await fetch(`${BACKEND}/chat`, {
+      let url;
+      if (currentChat.type === 'global') url = `${BACKEND}/chat`;
+      else if (currentChat.type === 'dm') url = `${BACKEND}/dm/${currentChat.id}`;
+      else url = `${BACKEND}/groups/${currentChat.id}/messages`;
+
+      const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ text })
       });
-      const msg = await res.json();
-      if (!res.ok) { alert(msg.error); return; }
-
-      const container = document.getElementById('messages');
-      // Remove "no messages" placeholder if present
-      const placeholder = container.querySelector('.system-msg');
-      if (placeholder) placeholder.remove();
-
-      container.appendChild(renderMessage(msg));
-      container.scrollTop = container.scrollHeight;
+      const data = await res.json();
+      if (!res.ok) { alert(data.error); return; }
+      await loadAndRenderMessages();
+      $('messages').scrollTop = $('messages').scrollHeight;
     } catch {
-      alert('Failed to send message');
+      alert('Failed to send');
     } finally {
       btn.disabled = false;
       input.focus();
@@ -356,34 +1425,40 @@
   async function deleteMessage(id, btn) {
     if (!confirm('Delete this message?')) return;
     try {
-      await fetch(`${BACKEND}/chat/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      let url;
+      if (currentChat.type === 'global') url = `${BACKEND}/chat/${id}`;
+      else if (currentChat.type === 'dm') url = `${BACKEND}/dm/message/${id}`;
+      else url = `${BACKEND}/groups/${currentChat.id}/messages/${id}`;
+
+      await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       btn.closest('.msg').remove();
     } catch {
-      alert('Could not delete message');
+      alert('Could not delete');
     }
   }
 
-  // Send on Enter
-  document.getElementById('msgInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
+  // Send on Enter, Shift+Enter for newline
+  $('msgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
-  // Poll for new messages every 5 seconds
-  setInterval(loadMessages, 5000);
+  $('addFriendInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendFriendRequest();
+  });
+
+  $('addMemberInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addGroupMember();
+  });
 
   // ================================================================
-  // INIT
+  // POLL for friend requests periodically
   // ================================================================
-  updateAuthUI();
-  loadMessages();
+  setInterval(() => { if (me) loadFriends(); }, 15000);
 
-  // If already logged in, skip modal. If not, show it automatically.
-  if (!currentUsername) {
-    // Don't auto-show — let them read chat first, they can click the prompt
-  }
+  // ================================================================
+  // BOOT
+  // ================================================================
+  init();
 </script>
 </body>
 </html>
