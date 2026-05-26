@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Friend Requests Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+  EMBEDDABLE WIDGET: Friend Requests
+  Shows incoming (accept/ignore) and outgoing (cancel) friend requests.
+  Inspired by the Roblox-style card UI in the reference images.
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #080c14;
+  --surface:  #0e1422;
+  --surface2: #141c2e;
+  --border:   rgba(80,120,255,0.13);
+  --accent:   #4f6fff;
+  --accent2:  #7c3aff;
+  --green:    #22d3a5;
+  --red:      #f85a5a;
+  --text:     #d4defc;
+  --muted:    rgba(180,200,255,0.35);
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+#jmg-friend-requests {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  width: 100%;
+}
+.fr-section {
+  margin-bottom: 24px;
+}
+.fr-section-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fr-badge {
+  background: var(--red);
+  color: white;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+.fr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.fr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.fr-card:hover { border-color: rgba(79,111,255,0.3); }
+.fr-card.incoming { border-color: rgba(34,211,165,0.15); }
+.fr-card.outgoing { border-color: rgba(245,200,66,0.1); }
+.fr-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700;
+  color: var(--accent);
+  font-family: 'Space Mono', monospace;
+}
+.fr-card.incoming .fr-avatar { border-color: rgba(34,211,165,0.3); }
+.fr-name {
+  font-size: 13px; font-weight: 600;
+  text-align: center;
+}
+.fr-handle {
+  font-size: 11px; color: var(--muted);
+  text-align: center;
+  margin-top: -6px;
+}
+.fr-mutual {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(79,111,255,0.1);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+.fr-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.fr-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fr-btn.accept {
+  background: rgba(34,211,165,0.12);
+  border-color: rgba(34,211,165,0.25);
+  color: var(--green);
+}
+.fr-btn.accept:hover { background: rgba(34,211,165,0.22); }
+.fr-btn.ignore {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+.fr-btn.ignore:hover { border-color: var(--red); color: var(--red); }
+.fr-btn.cancel {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+  width: 100%;
+}
+.fr-btn.cancel:hover { border-color: var(--red); color: var(--red); }
+.fr-sent-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+.fr-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.fr-add-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.fr-add-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.fr-add-bar input:focus { border-color: var(--accent); }
+.fr-add-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.fr-add-btn:hover { opacity: 0.88; }
+.fr-add-err { font-size: 12px; color: var(--red); margin-top: -18px; margin-bottom: 10px; min-height: 16px; }
+.fr-toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.25s;
+  pointer-events: none;
+  z-index: 999;
+}
+.fr-toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- WIDGET ROOT -->
+<div id="jmg-friend-requests">
+  <div class="fr-add-bar">
+    <input type="text" id="fr-add-input" placeholder="Add by username..." maxlength="20" autocomplete="off">
+    <button class="fr-add-btn" id="fr-add-btn">Add Friend</button>
+  </div>
+  <div class="fr-add-err" id="fr-add-err"></div>
+
+  <div class="fr-section" id="fr-incoming-section">
+    <div class="fr-section-title">
+      Incoming Requests
+      <span class="fr-badge" id="fr-incoming-badge" style="display:none"></span>
+    </div>
+    <div class="fr-grid" id="fr-incoming-grid">
+      <div class="fr-empty">Loading...</div>
+    </div>
+  </div>
+
+  <div class="fr-section" id="fr-outgoing-section">
+    <div class="fr-section-title">Sent Requests</div>
+    <div class="fr-grid" id="fr-outgoing-grid">
+      <div class="fr-empty">Loading...</div>
+    </div>
+  </div>
+</div>
+<div class="fr-toast" id="fr-toast"></div>
+<!-- END WIDGET ROOT -->
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  const token   = localStorage.getItem('jmg_token');
+  const me      = localStorage.getItem('jmg_username');
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function initial(name) { return (name||'?')[0].toUpperCase(); }
+
+  function toast(msg, ok) {
+    const el = document.getElementById('fr-toast');
+    el.textContent = msg;
+    el.style.borderColor = ok ? 'rgba(34,211,165,0.3)' : 'rgba(248,90,90,0.3)';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  async function load() {
+    if (!token || !me) {
+      document.getElementById('fr-incoming-grid').innerHTML = '<div class="fr-empty">Log in to manage requests</div>';
+      document.getElementById('fr-outgoing-grid').innerHTML = '<div class="fr-empty">Log in to manage requests</div>';
+      return;
+    }
+    try {
+      const r = await fetch(`${BACKEND}/friends`, { headers: { Authorization:`Bearer ${token}` } });
+      const data = await r.json();
+      renderIncoming(data.incoming || []);
+      renderOutgoing(data.outgoing || []);
+    } catch {
+      document.getElementById('fr-incoming-grid').innerHTML = '<div class="fr-empty">Could not load requests</div>';
+    }
+  }
+
+  function renderIncoming(list) {
+    const grid  = document.getElementById('fr-incoming-grid');
+    const badge = document.getElementById('fr-incoming-badge');
+    if (!list.length) {
+      grid.innerHTML = '<div class="fr-empty">No incoming requests</div>';
+      badge.style.display = 'none';
+      return;
+    }
+    badge.textContent   = list.length;
+    badge.style.display = 'inline';
+    grid.innerHTML = list.map(u => `
+      <div class="fr-card incoming" id="fr-in-${esc(u)}">
+        <div class="fr-avatar">${initial(u)}</div>
+        <div class="fr-name">${esc(u)}</div>
+        <div class="fr-handle">@${esc(u)}</div>
+        <div class="fr-actions">
+          <button class="fr-btn ignore" onclick="respond('${esc(u)}','decline')">Ignore</button>
+          <button class="fr-btn accept" onclick="respond('${esc(u)}','accept')">Accept</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderOutgoing(list) {
+    const grid = document.getElementById('fr-outgoing-grid');
+    if (!list.length) {
+      grid.innerHTML = '<div class="fr-empty">No pending sent requests</div>';
+      return;
+    }
+    grid.innerHTML = list.map(u => `
+      <div class="fr-card outgoing" id="fr-out-${esc(u)}">
+        <div class="fr-avatar" style="color:var(--muted)">${initial(u)}</div>
+        <div class="fr-name">${esc(u)}</div>
+        <div class="fr-sent-label">Request sent</div>
+        <div class="fr-actions">
+          <button class="fr-btn cancel" onclick="cancelRequest('${esc(u)}')">Cancel</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.respond = async function(from, action) {
+    const card = document.getElementById('fr-in-' + from);
+    if (card) card.style.opacity = '0.4';
+    try {
+      const r = await fetch(`${BACKEND}/friends/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ from, action })
+      });
+      if (!r.ok) throw new Error();
+      toast(action === 'accept' ? `✓ Now friends with ${from}!` : `Declined ${from}`, action==='accept');
+      await load();
+    } catch { toast('Something went wrong', false); if (card) card.style.opacity = '1'; }
+  };
+
+  window.cancelRequest = async function(to) {
+    const card = document.getElementById('fr-out-' + to);
+    if (card) card.style.opacity = '0.4';
+    try {
+      const r = await fetch(`${BACKEND}/friends/${to}`, {
+        method: 'DELETE',
+        headers: { Authorization:`Bearer ${token}` }
+      });
+      if (!r.ok) throw new Error();
+      toast(`Request to ${to} cancelled`, true);
+      await load();
+    } catch { toast('Something went wrong', false); if (card) card.style.opacity = '1'; }
+  };
+
+  document.getElementById('fr-add-btn').onclick = async function() {
+    const input = document.getElementById('fr-add-input');
+    const err   = document.getElementById('fr-add-err');
+    const to    = input.value.trim();
+    err.textContent = '';
+    if (!to) return;
+    if (!token) { err.textContent = 'Not logged in'; return; }
+    this.disabled = true;
+    try {
+      const r = await fetch(`${BACKEND}/friends/request`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ to })
+      });
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error; return; }
+      input.value = '';
+      toast(`Friend request sent to ${to}!`, true);
+      await load();
+    } catch { err.textContent = 'Something went wrong'; }
+    finally { this.disabled = false; }
+  };
+
+  document.getElementById('fr-add-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('fr-add-btn').click();
+  });
+
+  load();
+  setInterval(load, 20000);
+})();
+</script>
+</body>
+</html>

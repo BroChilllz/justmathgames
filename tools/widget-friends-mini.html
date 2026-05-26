@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Friends List Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+  EMBEDDABLE WIDGET: Mini Friends List
+  Drop this entire file into an iframe or paste the <style>+<div>+<script> blocks into your page.
+  Requires: BACKEND constant pointing to your JustMathGames backend.
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #121215;
+  --surface:  #191b1f;
+  --surface2: #232527;
+  --border:   #34373d;
+  --accent:   #f2f4f5;
+  --accent2:  #b8b8b8;
+  --green:    #22d3a5;
+  --red:      #f85a5a;
+  --text:     #f2f4f5;
+  --muted:    #b8b8b8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+#jmg-mini-friends {
+  width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: 'DM Sans', sans-serif;
+}
+.mf-header {
+  padding: 11px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.mf-header:hover { background: var(--surface2); }
+.mf-header .online-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  display: inline-block;
+  margin-right: 6px;
+}
+.mf-list { overflow-y: auto; max-height: 340px; }
+.mf-list::-webkit-scrollbar { width: 3px; }
+.mf-list::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 2px; }
+.mf-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid #272930;
+}
+.mf-item:last-child { border-bottom: none; }
+.mf-item:hover { background: var(--surface2); }
+.mf-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.mf-avatar.group { border-radius: 8px; color: var(--accent2); }
+.mf-avatar .online-pip {
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 2px solid var(--surface);
+}
+.mf-info { flex: 1; min-width: 0; }
+.mf-item .mf-info { cursor: pointer; }
+.mf-name {
+  font-size: 13px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mf-last {
+  font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.mf-last.unread { color: var(--text); font-weight: 500; }
+.mf-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.mf-time { font-size: 10px; color: var(--muted); }
+.mf-badge {
+  background: var(--red);
+  color: white;
+  border-radius: 99px;
+  font-size: 9px; font-weight: 700;
+  padding: 1px 5px;
+  min-width: 16px; text-align: center;
+}
+.mf-empty {
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.mf-footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+}
+.mf-see-all {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mf-see-all:hover { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<!-- WIDGET ROOT — copy from here -->
+<div id="jmg-mini-friends">
+  <div class="mf-header" id="mf-header">
+    <span><span class="online-dot"></span>Friends & Groups</span>
+    <span id="mf-count" style="font-size:10px;"></span>
+  </div>
+  <div class="mf-list" id="mf-list">
+    <div class="mf-empty">Loading...</div>
+  </div>
+  <div class="mf-footer">
+    <button class="mf-see-all" id="mf-see-all-btn">See all friends -></button>
+  </div>
+</div>
+<!-- END WIDGET ROOT -->
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  const token   = localStorage.getItem('jmg_token');
+  const me      = localStorage.getItem('jmg_username');
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function initial(name) { return (name||'?')[0].toUpperCase(); }
+  function relTime(ds) {
+    const diff = Date.now() - new Date(ds).getTime();
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return Math.floor(diff/60000)+'m';
+    if (diff < 86400000) return Math.floor(diff/3600000)+'h';
+    return new Date(ds).toLocaleDateString([],{month:'short',day:'numeric'});
+  }
+
+  window.__jmgOpenWidgetChat = function(type, id, name) {
+    if (window.__jmgOpenChat) window.__jmgOpenChat(type, id, name);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openChat',
+        type,
+        id,
+        name
+      }, '*');
+    }
+  };
+
+  window.__jmgOpenFriendsListWidget = function() {
+    if (window.__jmgOpenFriendsList) window.__jmgOpenFriendsList();
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openFriendsList'
+      }, '*');
+    }
+  };
+
+  window.__jmgToggleMiniFriends = function() {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'toggleMiniFriends'
+      }, '*');
+    }
+  };
+
+  window.__jmgOpenProfileWidget = function(username) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openProfile',
+        username
+      }, '*');
+    }
+  };
+
+  // Fetch last DM message for a user
+  async function fetchLastDm(user) {
+    try {
+      const r = await fetch(`${BACKEND}/dm/${user}`, { headers:{ Authorization:`Bearer ${token}` } });
+      const msgs = await r.json();
+      return Array.isArray(msgs) && msgs.length ? msgs[msgs.length-1] : null;
+    } catch { return null; }
+  }
+
+  // Fetch last group message
+  async function fetchLastGroupMsg(groupId) {
+    try {
+      const r = await fetch(`${BACKEND}/groups/${groupId}/messages`, { headers:{ Authorization:`Bearer ${token}` } });
+      const msgs = await r.json();
+      return Array.isArray(msgs) && msgs.length ? msgs[msgs.length-1] : null;
+    } catch { return null; }
+  }
+
+  async function render() {
+    const list = document.getElementById('mf-list');
+    const count = document.getElementById('mf-count');
+    if (!token || !me) {
+      list.innerHTML = '<div class="mf-empty">Log in to see friends</div>';
+      return;
+    }
+
+    // Fetch friends
+    const [friendsRes, groupsRes] = await Promise.all([
+      fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } }),
+      fetch(`${BACKEND}/groups`,  { headers:{ Authorization:`Bearer ${token}` } })
+    ]);
+    const friendData = await friendsRes.json();
+    const groups     = await groupsRes.json();
+
+    const friends = friendData.friends || [];
+    count.textContent = `${friends.length + groups.length}`;
+
+    // Build items with last messages
+    const items = [];
+
+    // Friends (DMs)
+    for (const u of friends.slice(0,8)) {
+      const msg = await fetchLastDm(u);
+      items.push({
+        type: 'dm',
+        id: u,
+        name: u,
+        lastText: msg ? (msg.from === me ? 'You: ' : '') + msg.text : 'Say hello!',
+        lastTime: msg ? msg.createdAt : null,
+        unread: false
+      });
+    }
+
+    // Groups
+    for (const g of groups.slice(0,4)) {
+      const msg = await fetchLastGroupMsg(g._id);
+      items.push({
+        type: 'group',
+        id: g._id,
+        name: g.name,
+        lastText: msg ? (msg.username === me ? 'You: ' : msg.username+': ') + msg.text : 'No messages yet',
+        lastTime: msg ? msg.createdAt : null,
+        unread: false,
+        members: g.members.length
+      });
+    }
+
+    // Sort by lastTime desc
+    items.sort((a,b) => {
+      if (!a.lastTime && !b.lastTime) return 0;
+      if (!a.lastTime) return 1;
+      if (!b.lastTime) return -1;
+      return new Date(b.lastTime) - new Date(a.lastTime);
+    });
+
+    if (!items.length) {
+      list.innerHTML = '<div class="mf-empty">No friends yet</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(item => `
+      <div class="mf-item" onclick="window.__jmgOpenWidgetChat('${item.type}','${esc(item.id)}','${esc(item.name)}')">
+        <div class="mf-avatar ${item.type==='group'?'group':''}" ${item.type==='dm'?`onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(item.name)}')"`:''}>
+          ${initial(item.name)}
+        </div>
+        <div class="mf-info">
+          <div class="mf-name">${esc(item.name)}${item.type==='group'?` <span style="font-size:9px;color:var(--muted)">${item.members}p</span>`:''}</div>
+          <div class="mf-last ${item.unread?'unread':''}">${esc(item.lastText.slice(0,36)+(item.lastText.length>36?'...':''))}</div>
+        </div>
+        <div class="mf-meta">
+          ${item.lastTime ? `<span class="mf-time">${relTime(item.lastTime)}</span>` : ''}
+          ${item.unread ? `<span class="mf-badge">1</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('mf-see-all-btn').onclick = function() {
+    window.__jmgOpenFriendsListWidget();
+  };
+
+  document.getElementById('mf-header').onclick = function() {
+    window.__jmgToggleMiniFriends();
+  };
+
+  render();
+  setInterval(render, 15000);
+})();
+</script>
+</body>
+</html>

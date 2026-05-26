@@ -626,18 +626,18 @@
 <!-- AUTH MODAL -->
 <div class="modal-bg" id="authModalBg">
   <div class="modal">
-    <h2 id="authTitle">Sign Up</h2>
+    <h2 id="authTitle">Log In</h2>
     <div class="error" id="authError"></div>
     <label>Username</label>
     <input type="text" id="authUsername" placeholder="cool_name" maxlength="20" autocomplete="off">
     <div class="availability" id="usernameAvailability"></div>
     <label>Password</label>
     <input type="password" id="authPassword" placeholder="At least 6 characters" autocomplete="off">
-    <div class="hint" id="passwordHint">Minimum 6 characters</div>
+    <div class="hint" id="passwordHint" style="display:none;">Minimum 6 characters</div>
     <div class="modal-btns">
-      <button class="btn-primary" id="authSubmit">Sign Up</button>
+      <button class="btn-primary" id="authSubmit">Log In</button>
     </div>
-    <div class="modal switch" id="authSwitch">Already have an account? <span onclick="switchAuthMode()">Log in</span></div>
+    <div class="modal switch" id="authSwitch">No account? <span onclick="switchAuthMode()">Sign up</span></div>
   </div>
 </div>
 
@@ -749,8 +749,8 @@
     <div class="login-gate" id="loginGate" style="display:none;">
       <div style="font-size:48px;">💬</div>
       <h2>Join the conversation</h2>
-      <p>Sign up or log in to chat, add friends, and create groups.</p>
-      <button class="btn-primary" onclick="showAuthModal()">Sign Up / Log In</button>
+      <p>Log in or sign up to chat, add friends, and create groups.</p>
+      <button class="btn-primary" onclick="showAuthModal()">Log In / Sign Up</button>
     </div>
     <!-- shown when logged in, no channel selected -->
     <div class="no-chat" id="noChat">
@@ -781,7 +781,7 @@
 
   let token     = localStorage.getItem('jmg_token') || null;
   let me        = localStorage.getItem('jmg_username') || null;
-  let isLogin   = false;
+  let isLogin   = true;
   let checkTo   = null;
 
   // current chat state
@@ -840,12 +840,13 @@
   // ================================================================
 
   function showAuthModal() {
+    setAuthMode(true);
     openModal('authModalBg');
     $('authUsername').focus();
   }
 
-  function switchAuthMode() {
-    isLogin = !isLogin;
+  function setAuthMode(nextIsLogin) {
+    isLogin = nextIsLogin;
     $('authTitle').textContent = isLogin ? 'Log In' : 'Sign Up';
     $('authSubmit').textContent = isLogin ? 'Log In' : 'Sign Up';
     $('authSwitch').innerHTML = isLogin
@@ -854,6 +855,10 @@
     $('passwordHint').style.display = isLogin ? 'none' : 'block';
     $('usernameAvailability').textContent = '';
     $('authError').textContent = '';
+  }
+
+  function switchAuthMode() {
+    setAuthMode(!isLogin);
   }
 
   $('authUsername').addEventListener('input', () => {
@@ -948,7 +953,7 @@
       `;
     } else {
       el.innerHTML = `
-        <button class="btn-sm" onclick="showAuthModal()">Sign Up / Log In</button>
+        <button class="btn-sm" onclick="showAuthModal()">Log In / Sign Up</button>
       `;
     }
   }

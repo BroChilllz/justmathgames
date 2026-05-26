@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DM Chat Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+  EMBEDDABLE WIDGET: Direct Message Chat
+  Call window.jmgDmChat.open('username') to open a DM conversation.
+  Standalone: set JMG_DM_TARGET in the script to hardcode a recipient.
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #121215;
+  --surface:  #191b1f;
+  --surface2: #232527;
+  --border:   #34373d;
+  --accent:   #f2f4f5;
+  --accent2:  #b8b8b8;
+  --green:    #22d3a5;
+  --red:      #f85a5a;
+  --text:     #f2f4f5;
+  --muted:    #b8b8b8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; }
+
+#jmg-dm-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+}
+.dm-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.dm-header-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+.dm-header-avatar:hover { border-color: #d7d7d7; }
+.dm-header-avatar img,
+.dm-msg-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.dm-header-info { flex: 1; cursor: pointer; }
+.dm-header-name { font-size: 14px; font-weight: 600; }
+.dm-header-sub  { font-size: 11px; color: var(--muted); }
+.dm-header-actions { display: flex; gap: 6px; }
+.dm-btn-sm {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dm-btn-sm:hover { border-color: var(--red); color: var(--red); }
+
+/* First-conversation safety notice (like image 3) */
+.dm-safety-notice {
+  margin: 12px 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+.dm-safety-notice strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 13px; }
+
+.dm-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dm-messages::-webkit-scrollbar { width: 4px; }
+.dm-messages::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 2px; }
+
+.dm-day-sep {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 0;
+  position: relative;
+}
+.dm-day-sep::before, .dm-day-sep::after {
+  content: '';
+  position: absolute;
+  top: 50%; width: calc(50% - 44px);
+  height: 1px; background: var(--border);
+}
+.dm-day-sep::before { left: 0; }
+.dm-day-sep::after  { right: 0; }
+
+.dm-msg {
+  display: flex;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 8px;
+  max-width: 520px;
+  transition: background 0.1s;
+}
+.dm-msg:hover { background: rgba(255,255,255,0.02); }
+.dm-msg.own { align-self: flex-end; flex-direction: row-reverse; }
+.dm-msg-av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0; margin-top: 3px;
+  overflow: hidden;
+}
+.dm-msg.own .dm-msg-av { color: var(--accent2); }
+.dm-msg-body { min-width: 0; }
+.dm-msg-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.dm-msg.own .dm-msg-meta { flex-direction: row-reverse; }
+.dm-msg-author { font-size: 11px; font-weight: 600; color: var(--accent); }
+.dm-msg.own .dm-msg-author { color: var(--accent2); }
+.dm-msg-time { font-size: 10px; color: var(--muted); }
+.dm-msg-text { font-size: 13px; line-height: 1.55; word-break: break-word; }
+.dm-msg-bubble {
+  background: var(--surface2);
+  border-radius: 12px 12px 12px 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+  display: inline-block;
+  max-width: 100%;
+}
+.dm-msg.own .dm-msg-bubble {
+  background: #34373d;
+  border-radius: 12px 12px 4px 12px;
+}
+.dm-del-btn {
+  opacity: 0;
+  background: none; border: none;
+  color: var(--red); cursor: pointer;
+  font-size: 9px; padding: 0 3px;
+  transition: opacity 0.15s;
+  align-self: center;
+}
+.dm-msg:hover .dm-del-btn { opacity: 1; }
+
+.dm-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+.dm-no-target { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 14px; }
+
+.dm-input-bar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.dm-input-bar textarea {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  outline: none;
+  max-height: 100px;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+.dm-input-bar textarea:focus { border-color: var(--accent); }
+.dm-send-btn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid #f2f4f5;
+  background: #f2f4f5;
+  color: #191b1f;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.dm-send-btn:hover { opacity: 0.88; }
+.dm-send-btn:disabled { opacity: 0.35; cursor: default; }
+.dm-not-friends {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; text-align: center;
+  color: var(--muted); font-size: 13px;
+  padding: 30px;
+}
+</style>
+</head>
+<body>
+
+<!-- WIDGET ROOT -->
+<div id="jmg-dm-chat">
+  <div id="dm-no-target" class="dm-no-target">
+    <div style="font-size:32px">💬</div>
+    <div>Select a friend to message</div>
+  </div>
+  <div id="dm-main" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+    <div class="dm-header">
+      <div class="dm-header-avatar" id="dm-hdr-av" onclick="openCurrentProfile()">?</div>
+      <div class="dm-header-info" onclick="openCurrentProfile()">
+        <div class="dm-header-name" id="dm-hdr-name">—</div>
+        <div class="dm-header-sub">Direct Message</div>
+      </div>
+      <div class="dm-header-actions">
+        <button class="dm-btn-sm" id="dm-remove-btn">Remove Friend</button>
+      </div>
+    </div>
+    <div id="dm-safety" class="dm-safety-notice" style="display:none">
+      <strong id="dm-safety-title"></strong>
+      Your safety matters. Not feeling comfortable? You can block or report this person anytime from their profile.
+    </div>
+    <div class="dm-messages" id="dm-messages"></div>
+    <div class="dm-input-bar" id="dm-input-bar">
+      <textarea id="dm-input" rows="1" placeholder="Message..." maxlength="500"></textarea>
+      <button class="dm-send-btn" id="dm-send">Send</button>
+    </div>
+  </div>
+</div>
+<!-- END WIDGET ROOT -->
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  // To hardcode a recipient: const JMG_DM_TARGET = 'username';
+  const JMG_DM_TARGET = new URLSearchParams(window.location.search).get('target');
+
+  const token = localStorage.getItem('jmg_token');
+  const me    = localStorage.getItem('jmg_username');
+  let currentTarget = JMG_DM_TARGET;
+  let pollTimer = null;
+  let isFirstConvo = false;
+  const profileCache = {};
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function initial(n) { return (n||'?')[0].toUpperCase(); }
+  function fmtTime(ds) { return new Date(ds).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDate(ds) { return new Date(ds).toLocaleDateString([],{month:'short',day:'numeric'}); }
+
+  function localProfile(username) {
+    if (username !== me) return null;
+    return {
+      username: me,
+      pfp: localStorage.getItem('jmg_pfp') || ''
+    };
+  }
+
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+
+    const own = localProfile(username);
+    if (own) {
+      profileCache[username] = own;
+      return own;
+    }
+
+    try {
+      const r = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization:`Bearer ${token}` } : {}
+      });
+      if (r.ok) {
+        const data = await r.json();
+        profileCache[username] = {
+          username,
+          pfp: data.pfp || data.avatar || data.avatarUrl || ''
+        };
+        return profileCache[username];
+      }
+    } catch {}
+
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+
+  function avatarHtml(username) {
+    const profile = profileCache[username] || localProfile(username) || {};
+    return profile.pfp
+      ? `<img src="${escAttr(profile.pfp)}" alt="">`
+      : initial(username);
+  }
+
+  function renderAvatar(el, username) {
+    if (!el) return;
+    el.innerHTML = avatarHtml(username);
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  // Public API: call from outside to navigate
+  window.jmgDmChat = {
+    open: function(username) { openDm(username); }
+  };
+
+  window.openCurrentProfile = function() {
+    if (!currentTarget || !window.parent || window.parent === window) return;
+    window.parent.postMessage({
+      source: 'jmg-widget',
+      action: 'openProfile',
+      username: currentTarget
+    }, '*');
+  };
+
+  async function openDm(username) {
+    if (!token || !me) return;
+    clearInterval(pollTimer);
+    currentTarget = username;
+    document.getElementById('dm-no-target').style.display = 'none';
+    const main = document.getElementById('dm-main');
+    main.style.display = 'flex';
+    main.style.flexDirection = 'column';
+    main.style.flex = '1';
+    main.style.overflow = 'hidden';
+    await fetchProfile(username);
+    renderAvatar(document.getElementById('dm-hdr-av'), username);
+    document.getElementById('dm-hdr-name').textContent = username;
+    document.getElementById('dm-remove-btn').onclick   = () => removeFriend(username);
+    loadMessages();
+    pollTimer = setInterval(loadMessages, 5000);
+  }
+
+  async function loadMessages() {
+    if (!currentTarget || !token) return;
+    try {
+      const r = await fetch(`${BACKEND}/dm/${currentTarget}`, {
+        headers: { Authorization:`Bearer ${token}` }
+      });
+      if (!r.ok) return;
+      const msgs = await r.json();
+      const senders = [...new Set(msgs.map(msg => msg.from || msg.username).filter(Boolean))];
+      await Promise.all(senders.map(fetchProfile));
+      renderMessages(msgs);
+    } catch {}
+  }
+
+  function renderMessages(msgs) {
+    const container = document.getElementById('dm-messages');
+    const safety    = document.getElementById('dm-safety');
+    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+
+    // Show first-convo safety notice if no messages
+    if (msgs.length === 0) {
+      safety.style.display = 'block';
+      document.getElementById('dm-safety-title').textContent = `First conversation with ${currentTarget}`;
+      container.innerHTML = '<div class="dm-empty">Say hello!</div>';
+      return;
+    }
+    safety.style.display = 'none';
+
+    let html = '';
+    let lastDate = '';
+    msgs.forEach(msg => {
+      const sender = msg.from || msg.username;
+      const own    = sender === me;
+      const date   = fmtDate(msg.createdAt);
+      if (date !== lastDate) {
+        html += `<div class="dm-day-sep">${date}</div>`;
+        lastDate = date;
+      }
+      const delBtn = own
+        ? `<button class="dm-del-btn" onclick="deleteMsg('${msg._id}',this)">✕</button>`
+        : '';
+      html += `
+        <div class="dm-msg ${own?'own':''}" data-id="${msg._id}">
+          <div class="dm-msg-av">${avatarHtml(sender)}</div>
+          <div class="dm-msg-body">
+            <div class="dm-msg-meta">
+              <span class="dm-msg-author">${esc(sender)}</span>
+              <span class="dm-msg-time">${fmtTime(msg.createdAt)}</span>
+            </div>
+            <div class="dm-msg-bubble">${esc(msg.text)}</div>
+          </div>
+          ${delBtn}
+        </div>`;
+    });
+    container.innerHTML = html;
+    if (wasAtBottom) container.scrollTop = container.scrollHeight;
+  }
+
+  window.deleteMsg = async function(id, btn) {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await fetch(`${BACKEND}/dm/message/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization:`Bearer ${token}` }
+      });
+      btn.closest('.dm-msg').remove();
+    } catch { alert('Could not delete'); }
+  };
+
+  async function sendMessage() {
+    const input = document.getElementById('dm-input');
+    const text  = input.value.trim();
+    if (!text || !token || !currentTarget) return;
+    const btn = document.getElementById('dm-send');
+    btn.disabled = true;
+    input.value  = ''; input.style.height = 'auto';
+    try {
+      const r = await fetch(`${BACKEND}/dm/${currentTarget}`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ text })
+      });
+      if (!r.ok) { const d = await r.json(); alert(d.error); return; }
+      await loadMessages();
+      document.getElementById('dm-messages').scrollTop = 99999;
+    } catch { alert('Failed to send'); }
+    finally { btn.disabled = false; input.focus(); }
+  }
+
+  async function removeFriend(username) {
+    if (!confirm(`Remove ${username}?`)) return;
+    try {
+      await fetch(`${BACKEND}/friends/${username}`, {
+        method: 'DELETE', headers: { Authorization:`Bearer ${token}` }
+      });
+      clearInterval(pollTimer);
+      document.getElementById('dm-main').style.display = 'none';
+      document.getElementById('dm-no-target').style.display = 'flex';
+    } catch {}
+  }
+
+  document.getElementById('dm-send').onclick = sendMessage;
+  document.getElementById('dm-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('dm-input').addEventListener('input', function() { autoResize(this); });
+
+  if (JMG_DM_TARGET) openDm(JMG_DM_TARGET);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Group Chat Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+  EMBEDDABLE WIDGET: Group Chat
+  Call window.jmgGroupChat.open(groupId, groupName) to open a group.
+  Includes: add member (owner only), leave/delete group, member list.
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #121215;
+  --surface:  #191b1f;
+  --surface2: #232527;
+  --border:   #34373d;
+  --accent:   #f2f4f5;
+  --accent2:  #b8b8b8;
+  --green:    #22d3a5;
+  --red:      #f85a5a;
+  --text:     #f2f4f5;
+  --muted:    #b8b8b8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; }
+
+#jmg-group-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+}
+.gc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.gc-header-avatar {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent2);
+  flex-shrink: 0;
+}
+.gc-header-info { flex: 1; min-width: 0; }
+.gc-header-name { font-size: 14px; font-weight: 600; }
+.gc-header-members {
+  font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gc-header-actions { display: flex; gap: 6px; }
+.gc-btn-sm {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.gc-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.gc-btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+.gc-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gc-messages::-webkit-scrollbar { width: 4px; }
+.gc-messages::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 2px; }
+
+.gc-day-sep {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 0;
+  position: relative;
+}
+.gc-day-sep::before, .gc-day-sep::after {
+  content: '';
+  position: absolute;
+  top: 50%; width: calc(50% - 44px);
+  height: 1px; background: var(--border);
+}
+.gc-day-sep::before { left: 0; }
+.gc-day-sep::after  { right: 0; }
+
+.gc-msg {
+  display: flex;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 8px;
+  max-width: 580px;
+  transition: background 0.1s;
+}
+.gc-msg:hover { background: rgba(255,255,255,0.02); }
+.gc-msg.own { align-self: flex-end; flex-direction: row-reverse; }
+.gc-msg-av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0; margin-top: 3px;
+}
+.gc-msg.own .gc-msg-av { color: var(--accent2); }
+.gc-msg-body { min-width: 0; }
+.gc-msg-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.gc-msg.own .gc-msg-meta { flex-direction: row-reverse; }
+.gc-msg-author { font-size: 11px; font-weight: 600; color: var(--accent); }
+.gc-msg.own .gc-msg-author { color: var(--accent2); }
+.gc-msg-time { font-size: 10px; color: var(--muted); }
+.gc-msg-bubble {
+  background: var(--surface2);
+  border-radius: 12px 12px 12px 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+  display: inline-block;
+  max-width: 100%;
+}
+.gc-msg.own .gc-msg-bubble {
+  background: #34373d;
+  border-radius: 12px 12px 4px 12px;
+}
+.gc-del-btn {
+  opacity: 0;
+  background: none; border: none;
+  color: var(--red); cursor: pointer;
+  font-size: 9px; padding: 0 3px;
+  transition: opacity 0.15s;
+  align-self: center;
+}
+.gc-msg:hover .gc-del-btn { opacity: 1; }
+
+.gc-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+.gc-no-target { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 14px; }
+
+.gc-input-bar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.gc-input-bar textarea {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  outline: none;
+  max-height: 100px;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+.gc-input-bar textarea:focus { border-color: var(--accent); }
+.gc-send-btn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid #f2f4f5;
+  background: #f2f4f5;
+  color: #191b1f;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.gc-send-btn:hover { opacity: 0.88; }
+.gc-send-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* Add member modal */
+.gc-modal-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(3px);
+}
+.gc-modal-bg.hidden { display: none; }
+.gc-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  width: 320px;
+}
+.gc-modal h3 { font-size: 16px; margin-bottom: 16px; }
+.gc-modal input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+.gc-modal input:focus { border-color: var(--accent); }
+.gc-modal-err { color: var(--red); font-size: 12px; margin-bottom: 10px; min-height: 16px; }
+.gc-modal-btns { display: flex; gap: 8px; }
+.gc-modal-btns button { flex: 1; padding: 9px; border-radius: 8px; font-size: 13px; font-family: 'DM Sans',sans-serif; cursor: pointer; transition: all 0.15s; }
+.gc-modal-cancel { border: 1px solid var(--border); background: transparent; color: var(--muted); }
+.gc-modal-cancel:hover { color: var(--text); border-color: var(--text); }
+.gc-modal-ok { border: 1px solid #f2f4f5; background: #f2f4f5; color: #191b1f; font-weight: 600; }
+.gc-modal-ok:hover { opacity: 0.88; }
+</style>
+</head>
+<body>
+
+<!-- WIDGET ROOT -->
+<div id="jmg-group-chat">
+  <div id="gc-no-target" class="gc-no-target">
+    <div style="font-size:32px">#</div>
+    <div>Select a group to open it</div>
+  </div>
+  <div id="gc-main" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+    <div class="gc-header">
+      <div class="gc-header-avatar" id="gc-hdr-av">#</div>
+      <div class="gc-header-info">
+        <div class="gc-header-name" id="gc-hdr-name">—</div>
+        <div class="gc-header-members" id="gc-hdr-members"></div>
+      </div>
+      <div class="gc-header-actions" id="gc-hdr-actions"></div>
+    </div>
+    <div class="gc-messages" id="gc-messages"></div>
+    <div class="gc-input-bar">
+      <textarea id="gc-input" rows="1" placeholder="Message group..." maxlength="500"></textarea>
+      <button class="gc-send-btn" id="gc-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="gc-modal-bg hidden" id="gc-add-modal">
+  <div class="gc-modal">
+    <h3>Add Member</h3>
+    <div class="gc-modal-err" id="gc-add-err"></div>
+    <input type="text" id="gc-add-input" placeholder="username" maxlength="20" autocomplete="off">
+    <div class="gc-modal-btns">
+      <button class="gc-modal-cancel" onclick="document.getElementById('gc-add-modal').classList.add('hidden')">Cancel</button>
+      <button class="gc-modal-ok" onclick="addMember()">Add</button>
+    </div>
+  </div>
+</div>
+<!-- END WIDGET ROOT -->
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  const token = localStorage.getItem('jmg_token');
+  const me    = localStorage.getItem('jmg_username');
+  const params = new URLSearchParams(window.location.search);
+  const JMG_GROUP_ID = params.get('groupId');
+  const JMG_GROUP_NAME = params.get('groupName') || '';
+  let current = null; // { id, name, members, owner }
+  let pollTimer = null;
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function initial(n) { return (n||'?')[0].toUpperCase(); }
+  function fmtTime(ds) { return new Date(ds).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function fmtDate(ds) { return new Date(ds).toLocaleDateString([],{month:'short',day:'numeric'}); }
+  function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+  // Public API
+  window.jmgGroupChat = {
+    open: function(groupId, groupName) { openGroup(groupId, groupName); }
+  };
+
+  async function openGroup(groupId, groupName) {
+    if (!token || !me) return;
+    clearInterval(pollTimer);
+    // Fetch group details
+    try {
+      const r = await fetch(`${BACKEND}/groups`, { headers:{Authorization:`Bearer ${token}`} });
+      const groups = await r.json();
+      const g = groups.find(x => x._id === groupId) || { _id: groupId, name: groupName, members: [], owner: null };
+      current = { id: g._id, name: g.name, members: g.members, owner: g.owner };
+    } catch {
+      current = { id: groupId, name: groupName, members: [], owner: null };
+    }
+
+    document.getElementById('gc-no-target').style.display = 'none';
+    const main = document.getElementById('gc-main');
+    main.style.display = 'flex'; main.style.flexDirection = 'column'; main.style.flex = '1'; main.style.overflow = 'hidden';
+
+    document.getElementById('gc-hdr-av').textContent   = initial(current.name);
+    document.getElementById('gc-hdr-name').textContent = current.name;
+    document.getElementById('gc-hdr-members').textContent = `${current.members.length} members: ${current.members.join(', ')}`;
+
+    const isOwner = current.owner === me;
+    document.getElementById('gc-hdr-actions').innerHTML = `
+      ${isOwner ? `<button class="gc-btn-sm" onclick="openAddModal()">+ Add Member</button>` : ''}
+      <button class="gc-btn-sm danger" onclick="leaveOrDelete()">${isOwner ? 'Delete' : 'Leave'}</button>
+    `;
+
+    await loadMessages();
+    pollTimer = setInterval(loadMessages, 5000);
+  }
+
+  async function loadMessages() {
+    if (!current || !token) return;
+    try {
+      const r = await fetch(`${BACKEND}/groups/${current.id}/messages`, { headers:{Authorization:`Bearer ${token}`} });
+      if (!r.ok) return;
+      const msgs = await r.json();
+      renderMessages(msgs);
+    } catch {}
+  }
+
+  function renderMessages(msgs) {
+    const container = document.getElementById('gc-messages');
+    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+    if (!msgs.length) { container.innerHTML='<div class="gc-empty">No messages yet. Say hello!</div>'; return; }
+    let html = '', lastDate = '';
+    msgs.forEach(msg => {
+      const sender = msg.username || msg.from;
+      const own    = sender === me;
+      const date   = fmtDate(msg.createdAt);
+      if (date !== lastDate) { html += `<div class="gc-day-sep">${date}</div>`; lastDate = date; }
+      const delBtn = own ? `<button class="gc-del-btn" onclick="deleteMsg('${msg._id}',this)">✕</button>` : '';
+      html += `
+        <div class="gc-msg ${own?'own':''}" data-id="${msg._id}">
+          <div class="gc-msg-av">${initial(sender)}</div>
+          <div class="gc-msg-body">
+            <div class="gc-msg-meta">
+              <span class="gc-msg-author">${esc(sender)}</span>
+              <span class="gc-msg-time">${fmtTime(msg.createdAt)}</span>
+            </div>
+            <div class="gc-msg-bubble">${esc(msg.text)}</div>
+          </div>
+          ${delBtn}
+        </div>`;
+    });
+    container.innerHTML = html;
+    if (wasAtBottom) container.scrollTop = container.scrollHeight;
+  }
+
+  window.deleteMsg = async function(id, btn) {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await fetch(`${BACKEND}/groups/${current.id}/messages/${id}`, { method:'DELETE', headers:{Authorization:`Bearer ${token}`} });
+      btn.closest('.gc-msg').remove();
+    } catch { alert('Could not delete'); }
+  };
+
+  async function sendMessage() {
+    const input = document.getElementById('gc-input');
+    const text  = input.value.trim();
+    if (!text || !token || !current) return;
+    const btn = document.getElementById('gc-send');
+    btn.disabled = true; input.value = ''; input.style.height = 'auto';
+    try {
+      const r = await fetch(`${BACKEND}/groups/${current.id}/messages`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({text})
+      });
+      if (!r.ok) { const d=await r.json(); alert(d.error); return; }
+      await loadMessages();
+      document.getElementById('gc-messages').scrollTop = 99999;
+    } catch { alert('Failed to send'); }
+    finally { btn.disabled=false; input.focus(); }
+  }
+
+  window.openAddModal = function() {
+    document.getElementById('gc-add-err').textContent = '';
+    document.getElementById('gc-add-input').value     = '';
+    document.getElementById('gc-add-modal').classList.remove('hidden');
+    document.getElementById('gc-add-input').focus();
+  };
+
+  window.addMember = async function() {
+    const username = document.getElementById('gc-add-input').value.trim();
+    const err      = document.getElementById('gc-add-err');
+    if (!username || !current) return;
+    try {
+      const r = await fetch(`${BACKEND}/groups/${current.id}/members`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({username})
+      });
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error; return; }
+      document.getElementById('gc-add-modal').classList.add('hidden');
+      openGroup(current.id, current.name); // refresh
+    } catch { err.textContent = 'Something went wrong'; }
+  };
+
+  window.leaveOrDelete = async function() {
+    if (!current) return;
+    const isOwner = current.owner === me;
+    if (!confirm(`Are you sure you want to ${isOwner?'delete':'leave'} this group?`)) return;
+    try {
+      if (isOwner) {
+        await fetch(`${BACKEND}/groups/${current.id}`, {method:'DELETE', headers:{Authorization:`Bearer ${token}`}});
+      } else {
+        await fetch(`${BACKEND}/groups/${current.id}/members/${me}`, {method:'DELETE', headers:{Authorization:`Bearer ${token}`}});
+      }
+      clearInterval(pollTimer); current = null;
+      document.getElementById('gc-main').style.display = 'none';
+      document.getElementById('gc-no-target').style.display = 'flex';
+    } catch {}
+  };
+
+  document.getElementById('gc-send').onclick = sendMessage;
+  document.getElementById('gc-input').addEventListener('keydown', e => {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('gc-input').addEventListener('input', function() { autoResize(this); });
+  document.getElementById('gc-add-input').addEventListener('keydown', e => { if(e.key==='Enter') window.addMember(); });
+
+  if (JMG_GROUP_ID) openGroup(JMG_GROUP_ID, JMG_GROUP_NAME);
+})();
+</script>
+</body>
+</html>

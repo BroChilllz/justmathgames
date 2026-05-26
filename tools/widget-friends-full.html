@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Full Friends List Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+  EMBEDDABLE WIDGET: Full Friends List
+  Shows all friends in a grid with online/offline status, like a Roblox-style friends page.
+  Exposes: window.__jmgOpenChat(type, id, name) for navigation
+*/
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #121215;
+  --surface:  #191b1f;
+  --surface2: #232527;
+  --border:   #34373d;
+  --accent:   #f2f4f5;
+  --accent2:  #b8b8b8;
+  --green:    #22d3a5;
+  --red:      #f85a5a;
+  --yellow:   #f5c842;
+  --text:     #f2f4f5;
+  --muted:    #b8b8b8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+#jmg-friends-full {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  width: 100%;
+}
+.fl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 16px;
+  flex-wrap: wrap;
+}
+.fl-toolbar h2 {
+  font-size: 14px;
+  color: var(--accent);
+  flex: 1;
+}
+.fl-search {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  width: 200px;
+  transition: border-color 0.15s;
+}
+.fl-search:focus { border-color: var(--accent); }
+.fl-filter {
+  display: flex;
+  gap: 6px;
+}
+.fl-filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fl-filter-btn.active { background: #f2f4f5; color: #191b1f; border-color: #f2f4f5; }
+.fl-filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+.fl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.fl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.fl-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #232527;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.fl-card:hover { border-color: #5f626a; transform: translateY(-1px); }
+.fl-card:hover::before { opacity: 1; }
+.fl-card-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fl-card-avatar:hover { border-color: #d7d7d7; }
+.fl-card-avatar.group { border-radius: 10px; color: var(--accent2); }
+.status-pip {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+}
+.status-pip.online  { background: var(--green); }
+.status-pip.offline { background: var(--muted); }
+.fl-card-info { flex: 1; min-width: 0; }
+.fl-card-name {
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fl-card-handle {
+  font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.fl-card-status {
+  font-size: 10px; font-weight: 600;
+  margin-top: 4px;
+}
+.fl-card-status.online { color: var(--green); }
+.fl-card-status.offline { color: var(--muted); }
+.fl-card-status.playing { color: var(--yellow); }
+.fl-card-dm-btn {
+  background: #232527;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.fl-card-dm-btn:hover { background: #2b2d33; border-color: #5f626a; }
+.fl-section-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--muted);
+  grid-column: 1/-1;
+  padding-top: 6px;
+}
+.fl-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.fl-loading { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+html.row-mode,
+html.row-mode body {
+  background: transparent;
+  overflow: hidden;
+}
+html.row-mode #jmg-friends-full {
+  background: transparent;
+}
+html.row-mode .fl-toolbar {
+  display: none;
+}
+html.row-mode .fl-grid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 0 8px;
+}
+html.row-mode .fl-grid::-webkit-scrollbar {
+  height: 4px;
+}
+html.row-mode .fl-grid::-webkit-scrollbar-thumb {
+  background: #4b4e57;
+  border-radius: 999px;
+}
+html.row-mode .fl-section-label {
+  display: none;
+}
+html.row-mode .fl-card {
+  width: 220px;
+  min-width: 220px;
+  min-height: 76px;
+  padding: 14px;
+  border-radius: 10px;
+}
+html.row-mode .fl-empty,
+html.row-mode .fl-loading {
+  width: 100%;
+  min-width: 260px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+</style>
+</head>
+<body>
+
+<!-- WIDGET ROOT -->
+<div id="jmg-friends-full">
+  <div class="fl-toolbar">
+    <h2>Friends</h2>
+    <input class="fl-search" type="text" id="fl-search" placeholder="Search friends...">
+    <div class="fl-filter">
+      <button class="fl-filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+      <button class="fl-filter-btn" data-filter="online" onclick="setFilter('online',this)">Online</button>
+      <button class="fl-filter-btn" data-filter="groups" onclick="setFilter('groups',this)">Groups</button>
+    </div>
+  </div>
+  <div class="fl-grid" id="fl-grid">
+    <div class="fl-loading">Loading friends...</div>
+  </div>
+</div>
+<!-- END WIDGET ROOT -->
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  const token   = localStorage.getItem('jmg_token');
+  const me      = localStorage.getItem('jmg_username');
+  const params  = new URLSearchParams(window.location.search);
+  const rowMode = params.get('mode') === 'row';
+
+  document.documentElement.classList.toggle('row-mode', rowMode);
+
+  let allFriends = [];
+  let allGroups  = [];
+  let currentFilter = 'all';
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function initial(name) { return (name||'?')[0].toUpperCase(); }
+
+  window.__jmgOpenWidgetChat = function(type, id, name) {
+    if (window.__jmgOpenChat) window.__jmgOpenChat(type, id, name);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openChat',
+        type,
+        id,
+        name
+      }, '*');
+    }
+  };
+
+  window.__jmgOpenProfileWidget = function(username) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openProfile',
+        username
+      }, '*');
+    }
+  };
+
+  window.setFilter = function(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.fl-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderGrid();
+  };
+
+  document.getElementById('fl-search').addEventListener('input', renderGrid);
+
+  function renderGrid() {
+    const query = document.getElementById('fl-search').value.toLowerCase();
+    const grid  = document.getElementById('fl-grid');
+    let html    = '';
+
+    if (!token || !me) {
+      grid.innerHTML = '<div class="fl-empty">Log in to see friends</div>';
+      return;
+    }
+
+    const showFriends = currentFilter !== 'groups';
+    const showGroups  = currentFilter !== 'online';
+
+    const filteredFriends = allFriends.filter(u => u.toLowerCase().includes(query));
+    const filteredGroups  = allGroups.filter(g => g.name.toLowerCase().includes(query));
+
+    if (showFriends && filteredFriends.length) {
+      html += `<div class="fl-section-label">Friends - ${filteredFriends.length}</div>`;
+      html += filteredFriends.map(u => `
+        <div class="fl-card" onclick="window.__jmgOpenWidgetChat('dm','${esc(u)}','${esc(u)}')">
+          <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(u)}')">
+            ${initial(u)}
+            <div class="status-pip offline"></div>
+          </div>
+          <div class="fl-card-info">
+            <div class="fl-card-name">${esc(u)}</div>
+            <div class="fl-card-handle">@${esc(u)}</div>
+            <div class="fl-card-status offline">Offline</div>
+          </div>
+          <button class="fl-card-dm-btn" onclick="event.stopPropagation();window.__jmgOpenWidgetChat('dm','${esc(u)}','${esc(u)}')">DM</button>
+        </div>
+      `).join('');
+    }
+
+    if (showGroups && filteredGroups.length) {
+      html += `<div class="fl-section-label">Groups - ${filteredGroups.length}</div>`;
+      html += filteredGroups.map(g => `
+        <div class="fl-card" onclick="window.__jmgOpenWidgetChat('group','${esc(g._id)}','${esc(g.name)}')">
+          <div class="fl-card-avatar group">${initial(g.name)}</div>
+          <div class="fl-card-info">
+            <div class="fl-card-name">${esc(g.name)}</div>
+            <div class="fl-card-handle">${g.members.length} member${g.members.length!==1?'s':''}</div>
+            <div class="fl-card-status" style="color:var(--accent2)">Group</div>
+          </div>
+          <button class="fl-card-dm-btn" style="border-color:var(--border);color:var(--accent2);background:var(--surface2)"
+            onclick="event.stopPropagation();window.__jmgOpenWidgetChat('group','${esc(g._id)}','${esc(g.name)}')">Open</button>
+        </div>
+      `).join('');
+    }
+
+    if (!html) {
+      html = `<div class="fl-empty">No friends found</div>`;
+    }
+
+    grid.innerHTML = html;
+  }
+
+  async function load() {
+    if (!token || !me) { renderGrid(); return; }
+    try {
+      const [fr, gr] = await Promise.all([
+        fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } }),
+        fetch(`${BACKEND}/groups`,  { headers:{ Authorization:`Bearer ${token}` } })
+      ]);
+      const fd = await fr.json();
+      allFriends = fd.friends || [];
+      allGroups  = await gr.json();
+      renderGrid();
+    } catch {
+      document.getElementById('fl-grid').innerHTML = '<div class="fl-empty">Could not load friends</div>';
+    }
+  }
+
+  load();
+  setInterval(load, 30000);
+})();
+</script>
+</body>
+</html>
