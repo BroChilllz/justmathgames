@@ -120,7 +120,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   font-size: 10px; font-weight: 700;
   color: var(--accent);
   flex-shrink: 0; margin-top: 3px;
+  overflow: hidden;
 }
+.gc-msg-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gc-msg.own .gc-msg-av { color: var(--accent2); }
 .gc-msg-body { min-width: 0; }
 .gc-msg-meta {
@@ -290,12 +292,43 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const JMG_GROUP_NAME = params.get('groupName') || '';
   let current = null; // { id, name, members, owner }
   let pollTimer = null;
+  let profileCache = {};
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s) { return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function initial(n) { return (n||'?')[0].toUpperCase(); }
   function fmtTime(ds) { return new Date(ds).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
   function fmtDate(ds) { return new Date(ds).toLocaleDateString([],{month:'short',day:'numeric'}); }
   function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+  function localProfile(username) {
+    if (username !== me) return null;
+    return { username: me, pfp: localStorage.getItem('jmg_pfp') || '' };
+  }
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+    const own = localProfile(username);
+    if (own) {
+      profileCache[username] = own;
+      return own;
+    }
+    try {
+      const r = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization:`Bearer ${token}` } : {}
+      });
+      if (r.ok) {
+        const data = await r.json();
+        profileCache[username] = { username, pfp: data.pfp || data.avatar || data.avatarUrl || '' };
+        return profileCache[username];
+      }
+    } catch {}
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+  function avatarHtml(username) {
+    const profile = profileCache[username] || localProfile(username) || {};
+    return profile.pfp ? `<img src="${escAttr(profile.pfp)}" alt="">` : initial(username);
+  }
 
   // Public API
   window.jmgGroupChat = {
@@ -330,7 +363,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     `;
 
     await loadMessages();
-    pollTimer = setInterval(loadMessages, 5000);
+    pollTimer = setInterval(loadMessages, 1000);
   }
 
   async function loadMessages() {
@@ -339,6 +372,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       const r = await fetch(`${BACKEND}/groups/${current.id}/messages`, { headers:{Authorization:`Bearer ${token}`} });
       if (!r.ok) return;
       const msgs = await r.json();
+      await Promise.all([...new Set(msgs.map(msg => msg.username || msg.from).filter(Boolean))].map(fetchProfile));
       renderMessages(msgs);
     } catch {}
   }
@@ -356,7 +390,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       const delBtn = own ? `<button class="gc-del-btn" onclick="deleteMsg('${msg._id}',this)">✕</button>` : '';
       html += `
         <div class="gc-msg ${own?'own':''}" data-id="${msg._id}">
-          <div class="gc-msg-av">${initial(sender)}</div>
+          <div class="gc-msg-av">${avatarHtml(sender)}</div>
           <div class="gc-msg-body">
             <div class="gc-msg-meta">
               <span class="gc-msg-author">${esc(sender)}</span>

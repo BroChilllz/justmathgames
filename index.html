@@ -519,9 +519,31 @@ body {
 .homepage-friends-strip {
   margin-left: var(--sidebar-width);
   padding: 16px 20px 0;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.homepage-add-friends {
+  min-width: 116px;
+  border: 1px solid var(--roblox-border);
+  border-radius: 8px;
+  background: #232527;
+  color: var(--roblox-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.homepage-add-friends:hover {
+  border-color: #5f626a;
+  background: #2b2d33;
 }
 
 .homepage-friends-frame {
+  flex: 1;
   width: 100%;
   height: 92px;
   display: block;
@@ -593,6 +615,84 @@ body {
   color: #f85a5a;
 }
 
+.social-modal {
+  width: min(760px, calc(100vw - 32px));
+  height: min(680px, calc(100vh - 44px));
+  background: #111217;
+  border: 1px solid var(--roblox-border);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.58);
+  color: var(--roblox-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.social-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--roblox-border-soft);
+  background: #191b1f;
+}
+
+.social-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.social-modal iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #121215;
+}
+
+.toast-stack {
+  position: fixed;
+  top: calc(var(--topbar-height) + 12px);
+  right: 14px;
+  z-index: 13000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100vw - 28px));
+  pointer-events: none;
+}
+
+.jmg-toast {
+  background: rgba(25,27,31,0.96);
+  border: 1px solid var(--roblox-border);
+  border-left: 3px solid #f2f4f5;
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.42);
+  color: var(--roblox-text);
+  padding: 10px 12px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.16s, transform 0.16s;
+}
+
+.jmg-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.jmg-toast-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.jmg-toast-body {
+  margin-top: 3px;
+  color: var(--roblox-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 @media (max-width: 760px) {
   .topbar {
     padding: 12px;
@@ -623,6 +723,14 @@ body {
     width: 260px;
     height: 430px;
     max-height: 55vh;
+  }
+
+  .homepage-friends-strip {
+    flex-direction: column;
+  }
+
+  .homepage-add-friends {
+    min-height: 38px;
   }
 
   .content-modal {
@@ -862,11 +970,13 @@ body {
     <div class="sidebar-label">Tools</div>
     <button onclick="openSidebarTool('newtab','https://docs.google.com/forms/d/1RpPAYJTy91Fbu1iQpvIOxtA1d4a2pSsBhuiIry5OLas/edit')">Suggestions</button>
     <button onclick="openSidebarTool('file','tools/changelog.html')">Changelog</button>
+    <button onclick="openSidebarTool('file','tools/chat.html')">Chat</button>
     <button onclick="openSidebarTool('file','tools/Discord.html')">Discord</button>
   </div>
 </aside>
 
 <section class="homepage-friends-strip" id="homepageFriendsStrip">
+  <button class="homepage-add-friends" type="button" onclick="openSocialModal('add')">Add Friends</button>
   <iframe
     id="friendsFullFrame"
     class="homepage-friends-frame"
@@ -1279,6 +1389,42 @@ body {
   <iframe id="miniFriendsFrame" src="tools/widget-friends-mini.html" title="Friends and groups"></iframe>
 </div>
 
+<div class="modal-backdrop" id="socialModal" aria-hidden="true">
+  <div class="social-modal">
+    <div class="social-modal-header">
+      <h2>Friends</h2>
+      <button class="modal-close" type="button" onclick="closeSocialModal()" aria-label="Close friends">&times;</button>
+    </div>
+    <iframe id="socialModalFrame" title="Friends and requests"></iframe>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="createGroupModal" aria-hidden="true">
+  <div class="profile-modal">
+    <div class="profile-modal-header">
+      <h2>Create GC</h2>
+      <button class="modal-close" type="button" onclick="closeCreateGroupModal()" aria-label="Close create group">&times;</button>
+    </div>
+    <div class="profile-modal-body">
+      <label class="profile-field">
+        <span>Name</span>
+        <input id="createGroupNameInput" maxlength="40" autocomplete="off" placeholder="Group name">
+      </label>
+      <label class="profile-field">
+        <span>Members</span>
+        <input id="createGroupMembersInput" autocomplete="off" placeholder="user1, user2, user3">
+      </label>
+      <div class="profile-actions">
+        <button type="button" onclick="closeCreateGroupModal()">Cancel</button>
+        <button class="primary" type="button" onclick="createGroupFromHomepage()">Create</button>
+      </div>
+      <div class="profile-message" id="createGroupMessage"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="jmgToastStack" aria-live="polite"></div>
+
 <div class="modal-backdrop" id="profileSettingsModal" aria-hidden="true">
   <div class="profile-modal">
     <div class="profile-modal-header">
@@ -1411,6 +1557,10 @@ const homeChatFrame = document.getElementById("homeChatFrame");
 const homeChatClose = document.getElementById("homeChatClose");
 const homeChatDock = document.getElementById("homeChatDock");
 const homepageFriendsStrip = document.getElementById("homepageFriendsStrip");
+const socialModal = document.getElementById("socialModal");
+const socialModalFrame = document.getElementById("socialModalFrame");
+const createGroupModal = document.getElementById("createGroupModal");
+const toastStack = document.getElementById("jmgToastStack");
 const profileSettingsModal = document.getElementById("profileSettingsModal");
 const publicProfileModal = document.getElementById("publicProfileModal");
 const contentDetailsModal = document.getElementById("contentDetailsModal");
@@ -1607,6 +1757,15 @@ async function saveProfileSettings() {
   const bio = document.getElementById("profileBioInput").value.trim();
   const message = document.getElementById("profileSettingsMessage");
 
+  if (loginUsername && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    message.textContent = "Username must be 3-20 letters, numbers, or underscores.";
+    return;
+  }
+  if (pfp && !/^https?:\/\//i.test(pfp)) {
+    message.textContent = "PFP must be an http or https URL.";
+    return;
+  }
+
   if (loginUsername) {
     localStorage.setItem("jmg_profile_username", username);
   }
@@ -1634,16 +1793,23 @@ async function saveProfileSettings() {
           password: password || undefined
         })
       });
+      const data = await response.json().catch(() => ({}));
       savedRemotely = response.ok;
       if (response.ok) {
-        const data = await response.json().catch(() => ({}));
         storeProfileFields(data);
-        if (data.username) {
-          localStorage.setItem("jmg_username", data.username);
-          localStorage.setItem("jmg_profile_username", data.username);
-        }
+        if (data.token) {
+          localStorage.setItem("jmg_token", data.token);
+          }
+          if (data.username) {
+            localStorage.setItem("jmg_username", data.username);
+            localStorage.setItem("jmg_profile_username", data.username);
+          }
         refreshTopUsername();
         notifyChatFramesAuthChanged();
+      } else {
+        message.textContent = data.error || "Profile could not be saved.";
+        await syncStoredProfileFromServer();
+        return;
       }
     }
   } catch {}
@@ -1851,14 +2017,18 @@ function closeContentDetails() {
 
 function launchContentCard(card) {
   const type = card.dataset.type;
+  const category = card.dataset.category || "";
+  const title = getCardTitle(card);
   closeContentDetails();
 
   if (type === "file") {
+    setPresenceActivity(category === "Movies" ? `Watching ${title}` : `Playing ${title}`);
     overlay.style.display = "flex";
     openGame(card.dataset.href);
   }
 
   if (type === "show") {
+    setPresenceActivity(`Watching ${title}`);
     overlay.style.display = "flex";
     openShow(
       JSON.parse(card.dataset.seasons),
@@ -1896,6 +2066,19 @@ async function saveContentUserData() {
 }
 
 async function loadGlobalContentStats() {
+  try {
+    const res = await fetch(`${BACKEND}/content/state/${encodeURIComponent(getUserId())}`);
+    if (!res.ok) throw new Error("content state unavailable");
+    const data = await res.json();
+    contentStats = normalizeStats(data.stats || {});
+    if (data.votes && typeof data.votes === "object") {
+      contentVotes = { ...contentVotes, ...data.votes };
+    }
+    localStorage.setItem(LOCAL_STATS_KEY, JSON.stringify(contentStats));
+    localStorage.setItem(LOCAL_VOTES_KEY, JSON.stringify(contentVotes));
+    return;
+  } catch {}
+
   try {
     const res = await fetch(`${BACKEND}/user/${CONTENT_STATS_USER_ID}`);
     const data = await res.json();
@@ -1958,7 +2141,27 @@ async function setCurrentVote(nextVote) {
 
   refreshContentOrdering();
   updateContentDetailsUi();
-  await Promise.all([saveContentUserData(), saveGlobalContentStats()]);
+
+  let syncedVote = false;
+  try {
+    const response = await fetch(`${BACKEND}/content/vote/${encodeURIComponent(getUserId())}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentKey: key, vote: finalVote })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.stats) contentStats[key] = data.stats;
+      if (data.votes && typeof data.votes === "object") contentVotes = data.votes;
+      syncedVote = true;
+      setLocalContentCache();
+      refreshContentOrdering();
+      updateContentDetailsUi();
+    }
+  } catch {}
+
+  await saveContentUserData();
+  if (!syncedVote) await saveGlobalContentStats();
 }
 
 contentPlayButton.addEventListener("click", () => {
@@ -2108,6 +2311,7 @@ function closeGame() {
   showPlayer.style.display = "none";
   seasonSelect.style.display = "none";
   episodeSelect.style.display = "none";
+  setPresenceActivity("");
 }
 
 function openSidebarTool(type, href) {
@@ -2124,6 +2328,109 @@ function openSidebarTool(type, href) {
   episodeSelect.style.display = "none";
   showFrame.src = "";
   frame.src = href;
+  setPresenceActivity("Using a tool");
+}
+
+function openSocialModal(focus = "friends") {
+  const params = new URLSearchParams({
+    mode: "popup",
+    requests: "1",
+    focus
+  });
+  socialModalFrame.src = `tools/widget-friends-full.html?${params.toString()}`;
+  socialModal.classList.add("is-open");
+  socialModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSocialModal() {
+  socialModal.classList.remove("is-open");
+  socialModal.setAttribute("aria-hidden", "true");
+  socialModalFrame.src = "";
+  reloadFriendsFrames();
+}
+
+function openCreateGroupModal() {
+  if (!localStorage.getItem("jmg_token")) {
+    openLoginScreen();
+    return;
+  }
+  document.getElementById("createGroupNameInput").value = "";
+  document.getElementById("createGroupMembersInput").value = "";
+  document.getElementById("createGroupMessage").textContent = "";
+  createGroupModal.classList.add("is-open");
+  createGroupModal.setAttribute("aria-hidden", "false");
+  setTimeout(() => document.getElementById("createGroupNameInput")?.focus(), 0);
+}
+
+function closeCreateGroupModal() {
+  createGroupModal.classList.remove("is-open");
+  createGroupModal.setAttribute("aria-hidden", "true");
+}
+
+async function createGroupFromHomepage() {
+  const token = localStorage.getItem("jmg_token");
+  const name = document.getElementById("createGroupNameInput").value.trim();
+  const members = document.getElementById("createGroupMembersInput").value
+    .split(",")
+    .map(member => member.trim())
+    .filter(Boolean);
+  const message = document.getElementById("createGroupMessage");
+  message.textContent = "";
+
+  if (!token) {
+    openLoginScreen();
+    return;
+  }
+  if (!name) {
+    message.textContent = "Group name required.";
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BACKEND}/groups`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ name, members })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      message.textContent = data.error || "Could not create group.";
+      return;
+    }
+    closeCreateGroupModal();
+    reloadFriendsFrames();
+    showToast("Group created", data.name || name);
+    openHomeChat("group", data._id, data.name || name);
+  } catch {
+    message.textContent = "Something went wrong.";
+  }
+}
+
+function showToast(title, body = "", ttl = 4200) {
+  if (!toastStack) return;
+  const toast = document.createElement("div");
+  toast.className = "jmg-toast";
+  toast.innerHTML = `
+    <div class="jmg-toast-title">${escapeHtml(title)}</div>
+    ${body ? `<div class="jmg-toast-body">${escapeHtml(body)}</div>` : ""}
+  `;
+  toastStack.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("is-visible"));
+  setTimeout(() => {
+    toast.classList.remove("is-visible");
+    setTimeout(() => toast.remove(), 220);
+  }, ttl);
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function openHomeChat(type, id, name) {
@@ -2153,6 +2460,22 @@ homeChatClose.addEventListener("click", () => {
   homeChatFrame.src = "";
 });
 
+socialModal.addEventListener("click", event => {
+  if (event.target === socialModal) closeSocialModal();
+});
+
+createGroupModal.addEventListener("click", event => {
+  if (event.target === createGroupModal) closeCreateGroupModal();
+});
+
+document.getElementById("createGroupNameInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") createGroupFromHomepage();
+});
+
+document.getElementById("createGroupMembersInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") createGroupFromHomepage();
+});
+
 window.addEventListener("message", event => {
   const data = event.data || {};
   if (data.source !== "jmg-widget") return;
@@ -2162,6 +2485,7 @@ window.addEventListener("message", event => {
   }
 
   if (data.action === "openChat") {
+    if (socialModal.classList.contains("is-open")) closeSocialModal();
     openHomeChat(data.type, data.id, data.name);
   }
 
@@ -2170,7 +2494,15 @@ window.addEventListener("message", event => {
   }
 
   if (data.action === "openFriendsList") {
-    homepageFriendsStrip.scrollIntoView({ behavior: "smooth", block: "start" });
+    openSocialModal("friends");
+  }
+
+  if (data.action === "openAddFriends") {
+    openSocialModal("add");
+  }
+
+  if (data.action === "openCreateGroup") {
+    openCreateGroupModal();
   }
 
   if (data.action === "showLogin") {
@@ -2201,6 +2533,175 @@ function getUserId() {
     localStorage.setItem('jmg_uid', id);
   }
   return id;
+}
+
+// ================================================================
+// PRESENCE + NOTIFICATIONS
+// ================================================================
+let currentPresenceActivity = "";
+let notificationState = null;
+
+function authHeaders() {
+  const token = localStorage.getItem("jmg_token");
+  return token ? { Authorization: `Bearer ${token}` } : null;
+}
+
+async function updatePresence(status = "online", activity = currentPresenceActivity) {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  try {
+    await fetch(`${BACKEND}/presence`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers
+      },
+      body: JSON.stringify({ status, activity }),
+      keepalive: true
+    });
+  } catch {}
+}
+
+function setPresenceActivity(activity) {
+  currentPresenceActivity = activity || "";
+  updatePresence("online", currentPresenceActivity);
+}
+
+function startPresenceHeartbeat() {
+  updatePresence("online", currentPresenceActivity);
+  setInterval(() => updatePresence("online", currentPresenceActivity), 20 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    updatePresence(document.hidden ? "offline" : "online", document.hidden ? "" : currentPresenceActivity);
+  });
+  window.addEventListener("beforeunload", () => {
+    updatePresence("offline", "");
+  });
+}
+
+function truncateNotificationText(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
+}
+
+function setFrom(values) {
+  return new Set((values || []).filter(Boolean));
+}
+
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const value of a) {
+    if (!b.has(value)) return false;
+  }
+  return true;
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) return null;
+  return response.json();
+}
+
+function latestMessage(messages) {
+  return Array.isArray(messages) && messages.length ? messages[messages.length - 1] : null;
+}
+
+async function pollNotifications() {
+  const headers = authHeaders();
+  const me = localStorage.getItem("jmg_username");
+  if (!headers || !me) {
+    notificationState = null;
+    return;
+  }
+
+  try {
+    const [friendData, groups, globalMessages] = await Promise.all([
+      fetchJson(`${BACKEND}/friends`, { headers }),
+      fetchJson(`${BACKEND}/groups`, { headers }),
+      fetchJson(`${BACKEND}/chat`, { headers })
+    ]);
+    if (!friendData) return;
+
+    const friends = friendData.friends || [];
+    const incoming = friendData.incoming || [];
+    const outgoing = friendData.outgoing || [];
+    const nextState = {
+      ready: true,
+      friends: setFrom(friends),
+      incoming: setFrom(incoming),
+      outgoing: setFrom(outgoing),
+      messages: new Map(notificationState?.messages || [])
+    };
+
+    const stateWasReady = Boolean(notificationState?.ready);
+    if (stateWasReady) {
+      for (const username of nextState.incoming) {
+        if (!notificationState.incoming.has(username)) {
+          showToast("Friend request", `${username} sent you a request`);
+        }
+      }
+      for (const username of nextState.friends) {
+        if (!notificationState.friends.has(username) && notificationState.outgoing.has(username)) {
+          showToast("Friend accepted", `${username} accepted your request`);
+        }
+      }
+      if (
+        !setsEqual(notificationState.friends, nextState.friends) ||
+        !setsEqual(notificationState.incoming, nextState.incoming) ||
+        !setsEqual(notificationState.outgoing, nextState.outgoing)
+      ) {
+        reloadFriendsFrames();
+        if (socialModal.classList.contains("is-open")) {
+          socialModalFrame.contentWindow?.postMessage({ action: "refresh" }, "*");
+        }
+      }
+    }
+
+    const messageJobs = [];
+    const globalLatest = latestMessage(globalMessages);
+    if (globalLatest) messageJobs.push({ key: "global", label: "Global Chat", message: globalLatest });
+
+    for (const friend of friends) {
+      messageJobs.push(
+        fetchJson(`${BACKEND}/dm/${encodeURIComponent(friend)}`, { headers })
+          .then(messages => ({
+            key: `dm:${friend}`,
+            label: friend,
+            message: latestMessage(messages)
+          }))
+      );
+    }
+
+    for (const group of Array.isArray(groups) ? groups : []) {
+      messageJobs.push(
+        fetchJson(`${BACKEND}/groups/${group._id}/messages`, { headers })
+          .then(messages => ({
+            key: `group:${group._id}`,
+            label: group.name || "Group chat",
+            message: latestMessage(messages)
+          }))
+      );
+    }
+
+    const latestItems = await Promise.all(messageJobs);
+    for (const item of latestItems) {
+      const message = item?.message;
+      if (!message?._id) continue;
+      const sender = message.username || message.from || "";
+      const previousId = nextState.messages.get(item.key);
+      if (stateWasReady && previousId && previousId !== message._id && sender !== me) {
+        showToast(item.label, `${sender}: ${truncateNotificationText(message.text)}`);
+      }
+      nextState.messages.set(item.key, message._id);
+    }
+
+    notificationState = nextState;
+  } catch {}
+}
+
+function startNotificationPolling() {
+  pollNotifications();
+  setInterval(pollNotifications, 1000);
 }
 
 // ================================================================
@@ -2458,7 +2959,6 @@ window.addEventListener('beforeunload', () => {
 async function initUserData() {
   const data = await restoreSavesFromBackend();
   await refreshCache();
-  await loadGlobalContentStats();
 
   favoriteTitles = Array.isArray(data.favorites) ? data.favorites : [];
   favoriteItems = Array.isArray(data.favoriteItems) ? data.favoriteItems : [];
@@ -2477,10 +2977,13 @@ async function initUserData() {
     contentVotes = { ...localVotes, ...contentVotes };
   } catch {}
 
+  await loadGlobalContentStats();
   refreshContentOrdering();
 }
 
 initUserData();
+startPresenceHeartbeat();
+startNotificationPolling();
 </script>
 </body>
 </html>

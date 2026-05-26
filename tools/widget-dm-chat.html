@@ -368,7 +368,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     document.getElementById('dm-hdr-name').textContent = username;
     document.getElementById('dm-remove-btn').onclick   = () => removeFriend(username);
     loadMessages();
-    pollTimer = setInterval(loadMessages, 5000);
+    pollTimer = setInterval(loadMessages, 1000);
   }
 
   async function loadMessages() {

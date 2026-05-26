@@ -32,6 +32,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   background: var(--bg);
   width: 100%;
 }
+
+html.popup-mode,
+html.popup-mode body,
+html.popup-mode #jmg-friends-full {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.popup-mode #jmg-friends-full {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
 .fl-toolbar {
   display: flex;
   align-items: center;
@@ -75,11 +90,66 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .fl-filter-btn.active { background: #f2f4f5; color: #191b1f; border-color: #f2f4f5; }
 .fl-filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
 
+.fl-add-row {
+  display: none;
+  gap: 8px;
+  padding: 0 0 14px;
+}
+
+.fl-add-row.is-visible {
+  display: flex;
+}
+
+.fl-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+}
+
+.fl-add-row input:focus { border-color: var(--accent); }
+
+.fl-add-row button {
+  border: 1px solid #f2f4f5;
+  border-radius: 8px;
+  background: #f2f4f5;
+  color: #191b1f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 14px;
+}
+
+.fl-message {
+  min-height: 18px;
+  margin: -8px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .fl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
 }
+
+html.popup-mode .fl-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+html.popup-mode .fl-grid::-webkit-scrollbar { width: 5px; }
+html.popup-mode .fl-grid::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 3px; }
+
 .fl-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -117,6 +187,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   overflow: hidden;
 }
 .fl-card-avatar:hover { border-color: #d7d7d7; }
+.fl-card-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fl-card-avatar.group { border-radius: 10px; color: var(--accent2); }
 .status-pip {
   position: absolute;
@@ -144,6 +215,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .fl-card-status.online { color: var(--green); }
 .fl-card-status.offline { color: var(--muted); }
 .fl-card-status.playing { color: var(--yellow); }
+.fl-card-status.pending { color: var(--yellow); }
 .fl-card-dm-btn {
   background: #232527;
   border: 1px solid var(--border);
@@ -157,6 +229,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   flex-shrink: 0;
 }
 .fl-card-dm-btn:hover { background: #2b2d33; border-color: #5f626a; }
+.fl-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.fl-card-dm-btn.danger:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
 .fl-section-label {
   font-size: 10px; font-weight: 700;
   letter-spacing: 0;
@@ -184,6 +265,10 @@ html.row-mode #jmg-friends-full {
 }
 html.row-mode .fl-toolbar {
   display: none;
+}
+html.row-mode .fl-add-row,
+html.row-mode .fl-message {
+  display: none !important;
 }
 html.row-mode .fl-grid {
   display: flex;
@@ -232,6 +317,11 @@ html.row-mode .fl-loading {
       <button class="fl-filter-btn" data-filter="online" onclick="setFilter('online',this)">Online</button>
     </div>
   </div>
+  <div class="fl-add-row" id="fl-add-row">
+    <input type="text" id="fl-add-input" placeholder="Add by username..." maxlength="20" autocomplete="off">
+    <button type="button" id="fl-add-button">Add Friend</button>
+  </div>
+  <div class="fl-message" id="fl-message"></div>
   <div class="fl-grid" id="fl-grid">
     <div class="fl-loading">Loading friends...</div>
   </div>
@@ -245,36 +335,75 @@ html.row-mode .fl-loading {
   const me      = localStorage.getItem('jmg_username');
   const params  = new URLSearchParams(window.location.search);
   const rowMode = params.get('mode') === 'row';
+  const popupMode = params.get('mode') === 'popup';
+  const includeRequests = params.get('requests') === '1' || popupMode;
+  const focusMode = params.get('focus') || '';
 
   document.documentElement.classList.toggle('row-mode', rowMode);
+  document.documentElement.classList.toggle('popup-mode', popupMode);
+  document.getElementById('fl-add-row').classList.toggle('is-visible', includeRequests);
 
   let allFriends = [];
+  let incomingRequests = [];
+  let outgoingRequests = [];
   let currentFilter = 'all';
+  let profileCache = {};
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s) { return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function initial(name) { return (name||'?')[0].toUpperCase(); }
+  function localProfile(username) {
+    if (username !== me) return null;
+    return { username: me, pfp: localStorage.getItem('jmg_pfp') || '' };
+  }
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+    const own = localProfile(username);
+    if (own) {
+      profileCache[username] = own;
+      return own;
+    }
+    try {
+      const r = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization:`Bearer ${token}` } : {}
+      });
+      if (r.ok) {
+        const data = await r.json();
+        profileCache[username] = { username, pfp: data.pfp || data.avatar || data.avatarUrl || '' };
+        return profileCache[username];
+      }
+    } catch {}
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+  function avatarHtml(username) {
+    const profile = profileCache[username] || localProfile(username) || {};
+    return profile.pfp ? `<img src="${escAttr(profile.pfp)}" alt="">` : initial(username);
+  }
   function normalizeFriend(friend) {
     if (typeof friend === 'string') {
+      const profile = profileCache[friend] || {};
       return {
         username: friend,
-        online: false,
-        statusClass: 'offline',
-        statusText: 'Offline'
+        online: profile.online === true,
+        statusClass: profile.statusClass || (profile.online ? 'online' : 'offline'),
+        statusText: profile.statusText || (profile.online ? 'Online' : 'Offline')
       };
     }
 
     const username = friend?.username || friend?.name || friend?.user || friend?.displayName || '';
     const rawStatus = String(friend?.status || friend?.presence || '').toLowerCase();
     const lastSeenTime = friend?.lastSeen ? Date.parse(friend.lastSeen) : 0;
-    const recentlySeen = Number.isFinite(lastSeenTime) && Date.now() - lastSeenTime < 5 * 60 * 1000;
+    const recentlySeen = Number.isFinite(lastSeenTime) && Date.now() - lastSeenTime < 45 * 1000;
     const playing = rawStatus === 'playing' || Boolean(friend?.playing || friend?.activity);
     const online = playing || friend?.online === true || rawStatus === 'online' || rawStatus === 'active' || recentlySeen;
 
     return {
       username,
       online,
-      statusClass: playing ? 'playing' : online ? 'online' : 'offline',
-      statusText: playing ? (friend.activity || 'Playing') : online ? 'Online' : 'Offline'
+      statusClass: friend?.statusClass || (playing ? 'playing' : online ? 'online' : 'offline'),
+      statusText: friend?.statusText || (playing ? (friend.activity || 'Playing') : online ? 'Online' : 'Offline')
     };
   }
 
@@ -324,12 +453,54 @@ html.row-mode .fl-loading {
       .filter(friend => friend.username.toLowerCase().includes(query))
       .filter(friend => currentFilter !== 'online' || friend.online);
 
+    const filteredIncoming = incomingRequests.filter(username => username.toLowerCase().includes(query));
+    const filteredOutgoing = outgoingRequests.filter(username => username.toLowerCase().includes(query));
+
+    if (includeRequests && filteredIncoming.length) {
+      html += `<div class="fl-section-label">Incoming Requests - ${filteredIncoming.length}</div>`;
+      html += filteredIncoming.map(username => `
+        <div class="fl-card">
+          <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(username)}')">
+            ${avatarHtml(username)}
+            <div class="status-pip ${normalizeFriend(username).statusClass}"></div>
+          </div>
+          <div class="fl-card-info">
+            <div class="fl-card-name">${esc(username)}</div>
+            <div class="fl-card-handle">@${esc(username)}</div>
+            <div class="fl-card-status pending">Wants to be friends</div>
+          </div>
+          <div class="fl-card-actions">
+            <button class="fl-card-dm-btn danger" onclick="event.stopPropagation();respondFriendRequest('${esc(username)}','decline')">Ignore</button>
+            <button class="fl-card-dm-btn" onclick="event.stopPropagation();respondFriendRequest('${esc(username)}','accept')">Accept</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    if (includeRequests && filteredOutgoing.length) {
+      html += `<div class="fl-section-label">Outgoing Requests - ${filteredOutgoing.length}</div>`;
+      html += filteredOutgoing.map(username => `
+        <div class="fl-card">
+          <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(username)}')">
+            ${avatarHtml(username)}
+            <div class="status-pip ${normalizeFriend(username).statusClass}"></div>
+          </div>
+          <div class="fl-card-info">
+            <div class="fl-card-name">${esc(username)}</div>
+            <div class="fl-card-handle">@${esc(username)}</div>
+            <div class="fl-card-status pending">Request sent</div>
+          </div>
+          <button class="fl-card-dm-btn danger" onclick="event.stopPropagation();cancelFriendRequest('${esc(username)}')">Cancel</button>
+        </div>
+      `).join('');
+    }
+
     if (filteredFriends.length) {
       html += `<div class="fl-section-label">Friends - ${filteredFriends.length}</div>`;
       html += filteredFriends.map(friend => `
         <div class="fl-card" onclick="window.__jmgOpenWidgetChat('dm','${esc(friend.username)}','${esc(friend.username)}')">
           <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(friend.username)}')">
-            ${initial(friend.username)}
+            ${avatarHtml(friend.username)}
             <div class="status-pip ${friend.statusClass}"></div>
           </div>
           <div class="fl-card-info">
@@ -354,15 +525,89 @@ html.row-mode .fl-loading {
     try {
       const fr = await fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } });
       const fd = await fr.json();
-      allFriends = (fd.friends || []).map(normalizeFriend).filter(friend => friend.username);
+      profileCache = { ...profileCache, ...(fd.profiles || {}) };
+      incomingRequests = fd.incoming || [];
+      outgoingRequests = fd.outgoing || [];
+      allFriends = (fd.friends || []).map(username => normalizeFriend({
+        username,
+        ...(profileCache[username] || {})
+      })).filter(friend => friend.username);
+      await Promise.all([...allFriends.map(friend => friend.username), ...incomingRequests, ...outgoingRequests].map(fetchProfile));
       renderGrid();
     } catch {
       document.getElementById('fl-grid').innerHTML = '<div class="fl-empty">Could not load friends</div>';
     }
   }
 
+  async function sendFriendRequest() {
+    const input = document.getElementById('fl-add-input');
+    const message = document.getElementById('fl-message');
+    const to = input.value.trim();
+    message.textContent = '';
+    if (!to) return;
+    if (!token) {
+      message.textContent = 'Log in to add friends.';
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND}/friends/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ to })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        message.textContent = data.error || 'Could not send request.';
+        return;
+      }
+      input.value = '';
+      message.textContent = `Request sent to ${to}.`;
+      await load();
+    } catch {
+      message.textContent = 'Something went wrong.';
+    }
+  }
+
+  window.respondFriendRequest = async function(username, action) {
+    try {
+      await fetch(`${BACKEND}/friends/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ from: username, action })
+      });
+      await load();
+    } catch {}
+  };
+
+  window.cancelFriendRequest = async function(username) {
+    try {
+      await fetch(`${BACKEND}/friends/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await load();
+    } catch {}
+  };
+
+  document.getElementById('fl-add-button').addEventListener('click', sendFriendRequest);
+  document.getElementById('fl-add-input').addEventListener('keydown', event => {
+    if (event.key === 'Enter') sendFriendRequest();
+  });
+
+  window.addEventListener('message', event => {
+    if ((event.data || {}).action === 'refresh') load();
+  });
+
   load();
-  setInterval(load, 30000);
+  if (focusMode === 'add') setTimeout(() => document.getElementById('fl-add-input')?.focus(), 0);
+  setInterval(load, 1000);
 })();
 </script>
 </body>

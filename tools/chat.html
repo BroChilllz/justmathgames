@@ -181,6 +181,14 @@
       color: var(--accent);
       flex-shrink: 0;
       font-family: 'Space Mono', monospace;
+      overflow: hidden;
+    }
+    .sidebar-item .avatar img,
+    .req-item .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .sidebar-item .avatar.group {
       border-radius: 8px;
@@ -357,7 +365,9 @@
       flex-shrink: 0;
       font-family: 'Space Mono', monospace;
       margin-top: 2px;
+      overflow: hidden;
     }
+    .msg .msg-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .msg.own .msg-avatar { color: var(--accent2); }
     .msg-body { flex: 1; min-width: 0; }
     .msg-meta {
@@ -801,6 +811,7 @@
   let friendData  = { friends: [], incoming: [], outgoing: [] };
   let groupData   = [];
   let groupMembers= {}; // groupId -> members array
+  let profileCache = {};
 
   const groupMemberList = []; // for create group modal
 
@@ -811,7 +822,11 @@
   function $(id) { return document.getElementById(id); }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(s) {
+    return escHtml(s).replace(/'/g,'&#39;');
   }
 
   function formatTime(ds) {
@@ -870,6 +885,53 @@
     } catch {}
   }
 
+  function localProfile(username) {
+    if (username !== me) return null;
+    return {
+      username: me,
+      pfp: localStorage.getItem('jmg_pfp') || ''
+    };
+  }
+
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+
+    const own = localProfile(username);
+    if (own) {
+      profileCache[username] = own;
+      return own;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const data = await response.json();
+        profileCache[username] = {
+          username,
+          pfp: getProfilePfp(data) || ''
+        };
+        return profileCache[username];
+      }
+    } catch {}
+
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+
+  async function preloadProfiles(usernames) {
+    await Promise.all([...new Set(usernames.filter(Boolean))].map(fetchProfile));
+  }
+
+  function avatarHtml(username) {
+    const profile = profileCache[username] || localProfile(username) || {};
+    return profile.pfp
+      ? `<img src="${escAttr(profile.pfp)}" alt="">`
+      : avatarLetter(username);
+  }
+
   function notifyAuthChanged() {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({
@@ -877,6 +939,18 @@
         action: 'authChanged'
       }, '*');
     }
+  }
+
+  async function updatePresence(status = 'online', activity = 'Chatting') {
+    if (!token) return;
+    try {
+      await fetch(`${BACKEND}/presence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status, activity: status === 'online' ? activity : '' }),
+        keepalive: true
+      });
+    } catch {}
   }
 
   // ================================================================
@@ -944,8 +1018,10 @@
       if (!res.ok) { $('authError').textContent = data.error; return; }
       token = data.token;
       me    = data.username;
+      profileCache = {};
       localStorage.setItem('jmg_token', token);
       localStorage.setItem('jmg_username', me);
+      storeProfileFields(data);
       closeModal('authModalBg');
       await initLoggedIn();
       notifyAuthChanged();
@@ -959,7 +1035,9 @@
   });
 
   function logout() {
+    updatePresence('offline', '');
     token = null; me = null;
+    profileCache = {};
     ['jmg_token','jmg_username','jmg_profile_username','jmg_bio','jmg_pfp'].forEach(key => {
       localStorage.removeItem(key);
     });
@@ -987,6 +1065,7 @@
   async function initLoggedIn() {
     closeModal('authModalBg');
     await syncOwnProfile();
+    await updatePresence('online', 'Chatting');
     updateTopbar();
     $('loginGate').style.display = 'none';
     await Promise.all([loadFriends(), loadGroups()]);
@@ -1030,6 +1109,11 @@
     try {
       const res  = await fetch(`${BACKEND}/friends`, { headers: { Authorization: `Bearer ${token}` } });
       friendData = await res.json();
+      await preloadProfiles([
+        ...(friendData.friends || []),
+        ...(friendData.incoming || []),
+        ...(friendData.outgoing || [])
+      ]);
       renderFriendsList();
       renderDmsList();
       // Update incoming badge
@@ -1050,7 +1134,7 @@
       incoming.filter(u => u.toLowerCase().includes(query)).forEach(u => {
         html += `
           <div class="req-item">
-            <div class="avatar" style="width:30px;height:30px;font-size:11px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace;flex-shrink:0;">${avatarLetter(u)}</div>
+            <div class="avatar" style="width:30px;height:30px;font-size:11px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace;flex-shrink:0;overflow:hidden;">${avatarHtml(u)}</div>
             <div class="req-name">${escHtml(u)}</div>
             <div class="req-actions">
               <button class="req-btn accept" onclick="respondFriendRequest('${u}','accept')">✓</button>
@@ -1065,7 +1149,7 @@
       outgoing.filter(u => u.toLowerCase().includes(query)).forEach(u => {
         html += `
           <div class="sidebar-item">
-            <div class="avatar">${avatarLetter(u)}</div>
+            <div class="avatar">${avatarHtml(u)}</div>
             <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Pending...</div></div>
             <button class="btn-sm danger" onclick="removeFriend('${u}')" title="Cancel request">✕</button>
           </div>`;
@@ -1078,7 +1162,7 @@
         const isActive = currentChat?.type === 'dm' && currentChat.id === u;
         html += `
           <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="openDmChat('${u}')">
-            <div class="avatar">${avatarLetter(u)}</div>
+            <div class="avatar">${avatarHtml(u)}</div>
             <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Friend</div></div>
             <button class="btn-sm danger" onclick="event.stopPropagation();removeFriend('${u}')" title="Remove friend">✕</button>
           </div>`;
@@ -1103,7 +1187,7 @@
       const isActive = currentChat?.type === 'dm' && currentChat.id === u;
       return `
         <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="openDmChat('${u}')">
-          <div class="avatar">${avatarLetter(u)}</div>
+          <div class="avatar">${avatarHtml(u)}</div>
           <div class="item-info"><div class="item-name">${escHtml(u)}</div><div class="item-sub">Direct Message</div></div>
         </div>`;
     }).join('');
@@ -1329,7 +1413,7 @@
     $('inputBar').style.display = 'flex';
     showChatPanel();
     loadAndRenderMessages();
-    pollTimer = setInterval(loadAndRenderMessages, 5000);
+    pollTimer = setInterval(loadAndRenderMessages, 1000);
   }
 
   function openDmChat(username) {
@@ -1345,7 +1429,7 @@
     renderDmsList();
     renderFriendsList();
     loadAndRenderMessages();
-    pollTimer = setInterval(loadAndRenderMessages, 5000);
+    pollTimer = setInterval(loadAndRenderMessages, 1000);
   }
 
   function openGroupChat(groupId, groupName) {
@@ -1363,7 +1447,7 @@
     showChatPanel();
     renderGroupsList();
     loadAndRenderMessages();
-    pollTimer = setInterval(loadAndRenderMessages, 5000);
+    pollTimer = setInterval(loadAndRenderMessages, 1000);
   }
 
   function clearPoll() {
@@ -1393,6 +1477,7 @@
       const res  = await fetch(url, { headers });
       const msgs = await res.json();
       if (!res.ok) return;
+      await preloadProfiles(msgs.map(msg => msg.username || msg.from));
 
       const container = $('messages');
       const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
@@ -1425,7 +1510,7 @@
         : '';
       html += `
         <div class="msg ${isOwn ? 'own' : ''}" data-id="${msg._id}">
-          <div class="msg-avatar">${avatarLetter(sender)}</div>
+          <div class="msg-avatar">${avatarHtml(sender)}</div>
           <div class="msg-body">
             <div class="msg-meta">
               <span class="msg-author">${escHtml(sender)}</span>
@@ -1504,7 +1589,9 @@
   // ================================================================
   // POLL for friend requests periodically
   // ================================================================
-  setInterval(() => { if (me) loadFriends(); }, 15000);
+  setInterval(() => { if (me) { loadFriends(); loadGroups(); } }, 1000);
+  setInterval(() => { if (me) updatePresence('online', 'Chatting'); }, 20000);
+  window.addEventListener('beforeunload', () => updatePresence('offline', ''));
 
   // ================================================================
   // BOOT

@@ -84,6 +84,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   position: relative;
   overflow: hidden;
 }
+.mf-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mf-avatar.group { border-radius: 8px; color: var(--accent2); }
 .mf-avatar .online-pip {
   position: absolute;
@@ -92,6 +93,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   border-radius: 50%;
   background: var(--green);
   border: 2px solid var(--surface);
+}
+.mf-avatar .online-pip.offline {
+  background: var(--muted);
+  box-shadow: none;
+}
+.mf-avatar .online-pip.playing {
+  background: #f5c842;
 }
 .mf-info { flex: 1; min-width: 0; }
 .mf-item .mf-info { cursor: pointer; }
@@ -125,6 +133,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   border-top: 1px solid var(--border);
   padding: 8px 14px;
 }
+.mf-footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
 .mf-see-all {
   width: 100%;
   background: none;
@@ -152,7 +165,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="mf-empty">Loading...</div>
   </div>
   <div class="mf-footer">
-    <button class="mf-see-all" id="mf-see-all-btn">See all friends -></button>
+    <div class="mf-footer-actions">
+      <button class="mf-see-all" id="mf-create-gc-btn">Create GC</button>
+      <button class="mf-see-all" id="mf-see-all-btn">See all friends -></button>
+    </div>
   </div>
 </div>
 <!-- END WIDGET ROOT -->
@@ -162,11 +178,50 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const BACKEND = 'https://justmathgames-backend.onrender.com';
   const token   = localStorage.getItem('jmg_token');
   const me      = localStorage.getItem('jmg_username');
+  let profileCache = {};
 
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+  function escAttr(s) { return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function initial(name) { return (name||'?')[0].toUpperCase(); }
+  function localProfile(username) {
+    if (username !== me) return null;
+    return { username: me, pfp: localStorage.getItem('jmg_pfp') || '' };
+  }
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+    const own = localProfile(username);
+    if (own) {
+      profileCache[username] = own;
+      return own;
+    }
+    try {
+      const r = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization:`Bearer ${token}` } : {}
+      });
+      if (r.ok) {
+        const data = await r.json();
+        profileCache[username] = { username, pfp: data.pfp || data.avatar || data.avatarUrl || '' };
+        return profileCache[username];
+      }
+    } catch {}
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+  function avatarHtml(username) {
+    const profile = profileCache[username] || localProfile(username) || {};
+    return profile.pfp ? `<img src="${escAttr(profile.pfp)}" alt="">` : initial(username);
+  }
+  function profileStatus(username) {
+    const profile = profileCache[username] || {};
+    return {
+      online: profile.online === true,
+      statusClass: profile.statusClass || (profile.online ? 'online' : 'offline'),
+      statusText: profile.statusText || (profile.online ? 'Online' : 'Offline')
+    };
+  }
   function relTime(ds) {
     const diff = Date.now() - new Date(ds).getTime();
     if (diff < 60000) return 'now';
@@ -194,6 +249,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       window.parent.postMessage({
         source: 'jmg-widget',
         action: 'openFriendsList'
+      }, '*');
+    }
+  };
+
+  window.__jmgOpenCreateGroupWidget = function() {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'openCreateGroup'
       }, '*');
     }
   };
@@ -272,9 +336,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     ]);
     const friendData = await friendsRes.json();
     const groups     = await groupsRes.json();
+    profileCache = { ...profileCache, ...(friendData.profiles || {}) };
 
     const friends = friendData.friends || [];
     count.textContent = `${friends.length + groups.length + 1}`;
+    await Promise.all(friends.slice(0,8).map(fetchProfile));
 
     // Friends (DMs)
     for (const u of friends.slice(0,8)) {
@@ -283,20 +349,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         type: 'dm',
         id: u,
         name: u,
-        lastText: msg ? (msg.from === me ? 'You: ' : '') + msg.text : 'Say hello!',
+        lastText: msg ? (msg.from === me ? 'You: ' : '') + msg.text : profileStatus(u).statusText,
         lastTime: msg ? msg.createdAt : null,
-        unread: false
+        unread: false,
+        statusClass: profileStatus(u).statusClass,
+        online: profileStatus(u).online
       });
     }
 
     // Groups
     for (const g of groups.slice(0,4)) {
       const msg = await fetchLastGroupMsg(g._id);
+      const sender = msg ? (msg.username || msg.from || 'Someone') : '';
       items.push({
         type: 'group',
         id: g._id,
         name: g.name,
-        lastText: msg ? (msg.username === me ? 'You: ' : msg.username+': ') + msg.text : 'No messages yet',
+        lastText: msg ? (sender === me ? 'You: ' : sender + ': ') + msg.text : 'No messages yet',
         lastTime: msg ? msg.createdAt : null,
         unread: false,
         members: g.members.length
@@ -323,7 +392,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     return `
       <div class="mf-item" onclick="window.__jmgOpenWidgetChat('${item.type}','${esc(item.id)}','${esc(item.name)}')">
         <div class="mf-avatar ${item.type==='group' || item.type==='global'?'group':''}" ${item.type==='dm'?`onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(item.name)}')"`:''}>
-          ${item.type === 'global' ? '&#127760;' : initial(item.name)}
+          ${item.type === 'global' ? '&#127760;' : item.type === 'dm' ? avatarHtml(item.name) : initial(item.name)}
+          ${item.type === 'dm' ? `<span class="online-pip ${esc(item.statusClass || 'offline')}"></span>` : ''}
         </div>
         <div class="mf-info">
           <div class="mf-name">${esc(item.name)}${item.type==='group'?` <span style="font-size:9px;color:var(--muted)">${item.members}p</span>`:''}</div>
@@ -341,12 +411,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     window.__jmgOpenFriendsListWidget();
   };
 
+  document.getElementById('mf-create-gc-btn').onclick = function() {
+    window.__jmgOpenCreateGroupWidget();
+  };
+
   document.getElementById('mf-header').onclick = function() {
     window.__jmgToggleMiniFriends();
   };
 
   render();
-  setInterval(render, 15000);
+  setInterval(render, 1000);
 })();
 </script>
 </body>

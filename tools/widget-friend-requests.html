@@ -83,7 +83,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   font-size: 20px; font-weight: 700;
   color: var(--accent);
   font-family: 'Space Mono', monospace;
+  overflow: hidden;
 }
+.fr-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fr-card.incoming .fr-avatar { border-color: rgba(34,211,165,0.3); }
 .fr-name {
   font-size: 13px; font-weight: 600;
@@ -237,9 +239,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const BACKEND = 'https://justmathgames-backend.onrender.com';
   const token   = localStorage.getItem('jmg_token');
   const me      = localStorage.getItem('jmg_username');
+  let profileCache = {};
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s) { return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function initial(name) { return (name||'?')[0].toUpperCase(); }
+  async function fetchProfile(username) {
+    if (!username) return { username, pfp: '' };
+    if (profileCache[username]) return profileCache[username];
+    try {
+      const r = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization:`Bearer ${token}` } : {}
+      });
+      if (r.ok) {
+        const data = await r.json();
+        profileCache[username] = { username, pfp: data.pfp || data.avatar || data.avatarUrl || '' };
+        return profileCache[username];
+      }
+    } catch {}
+    profileCache[username] = { username, pfp: '' };
+    return profileCache[username];
+  }
+  function avatarHtml(username) {
+    const profile = profileCache[username] || {};
+    return profile.pfp ? `<img src="${escAttr(profile.pfp)}" alt="">` : initial(username);
+  }
 
   function toast(msg, ok) {
     const el = document.getElementById('fr-toast');
@@ -258,6 +282,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     try {
       const r = await fetch(`${BACKEND}/friends`, { headers: { Authorization:`Bearer ${token}` } });
       const data = await r.json();
+      await Promise.all([...(data.incoming || []), ...(data.outgoing || [])].map(fetchProfile));
       renderIncoming(data.incoming || []);
       renderOutgoing(data.outgoing || []);
     } catch {
@@ -277,7 +302,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     badge.style.display = 'inline';
     grid.innerHTML = list.map(u => `
       <div class="fr-card incoming" id="fr-in-${esc(u)}">
-        <div class="fr-avatar">${initial(u)}</div>
+        <div class="fr-avatar">${avatarHtml(u)}</div>
         <div class="fr-name">${esc(u)}</div>
         <div class="fr-handle">@${esc(u)}</div>
         <div class="fr-actions">
@@ -296,7 +321,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     }
     grid.innerHTML = list.map(u => `
       <div class="fr-card outgoing" id="fr-out-${esc(u)}">
-        <div class="fr-avatar" style="color:var(--muted)">${initial(u)}</div>
+        <div class="fr-avatar" style="color:var(--muted)">${avatarHtml(u)}</div>
         <div class="fr-name">${esc(u)}</div>
         <div class="fr-sent-label">Request sent</div>
         <div class="fr-actions">
@@ -363,7 +388,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   });
 
   load();
-  setInterval(load, 20000);
+  setInterval(load, 1000);
 })();
 </script>
 </body>
