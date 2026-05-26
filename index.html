@@ -7,25 +7,24 @@
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b0f1a;
-  color: #e6e6ff;
+  font-family: "Builder Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #121215;
+  color: #f2f4f5;
+  min-height: 100vh;
 }
 
-/* Fullscreen button */
-#fullscreenBtn {
-  background: rgba(255,255,255,0.15);
-  border: none;
-  color: white;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-family: Arial, sans-serif;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-#fullscreenBtn:hover {
-  background: rgba(255,255,255,0.28);
+:root {
+  --topbar-height: 40px;
+  --sidebar-width: 220px;
+  --roblox-bg: #121215;
+  --roblox-topbar: #191b1f;
+  --roblox-surface: #232527;
+  --roblox-surface-hover: #2b2d33;
+  --roblox-border: #34373d;
+  --roblox-border-soft: #272930;
+  --roblox-text: #f2f4f5;
+  --roblox-muted: #b8b8b8;
+  --roblox-link: #00a2ff;
 }
 
 .topbar.hidden {
@@ -36,64 +35,607 @@ body {
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 300;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background: linear-gradient(90deg, #3b3bff, #7a2cff);
-  box-shadow: 0 4px 20px rgba(122, 44, 255, 0.3);
+  height: var(--topbar-height);
+  box-sizing: border-box;
+  padding: 0 14px;
+  background: var(--roblox-topbar);
+  border-bottom: 1px solid var(--roblox-border-soft);
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: bold;
-  color: white;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: var(--roblox-text);
+  line-height: 1;
 }
 
 .search {
-  width: 40%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(10, 12, 25, 0.75);
-  color: #ffffff;
+  position: absolute;
+  left: 50%;
+  width: min(520px, calc(100vw - 470px));
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--roblox-border);
+  background: #111217;
+  color: var(--roblox-text);
   outline: none;
   font-size: 14px;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
 }
 
 .search::placeholder {
-  color: rgba(230, 230, 255, 0.6);
+  color: #a4a6ac;
 }
 
 .search:focus {
-  border: 1px solid rgba(122, 44, 255, 0.8);
-  box-shadow: 0 0 12px rgba(122, 44, 255, 0.4);
-  background: rgba(15, 18, 35, 0.95);
+  border-color: #5f626a;
+  background: #16171d;
+}
+
+.top-user {
+  margin-left: auto;
+  max-width: 230px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--roblox-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 32px;
+  padding: 4px 8px 4px 10px;
+}
+
+.top-user:hover {
+  background: var(--roblox-surface);
+}
+
+.top-user-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #d7d7d7;
+  border: 1px solid #777a80;
+  color: #191b1f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.62);
+  z-index: 12000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-backdrop.is-open {
+  display: flex;
+}
+
+.profile-modal {
+  width: min(420px, calc(100vw - 32px));
+  background: var(--roblox-surface);
+  border: 1px solid var(--roblox-border);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+  color: var(--roblox-text);
+  overflow: hidden;
+}
+
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--roblox-border-soft);
+  background: #191b1f;
+}
+
+.profile-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--roblox-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--roblox-text);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  border-color: rgba(248,90,90,0.55);
+  color: #f85a5a;
+}
+
+.profile-modal-body {
+  padding: 16px;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #d7d7d7;
+  border: 1px solid #777a80;
+  color: #191b1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.profile-sub {
+  margin-top: 3px;
+  color: var(--roblox-muted);
+  font-size: 12px;
+}
+
+.profile-field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.profile-field span {
+  display: block;
+  color: var(--roblox-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.profile-field input,
+.profile-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--roblox-border);
+  border-radius: 6px;
+  background: #191b1f;
+  color: var(--roblox-text);
+  font: inherit;
+  outline: none;
+  padding: 9px 11px;
+}
+
+.profile-field textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.profile-field input:focus,
+.profile-field textarea:focus {
+  border-color: #5f626a;
+}
+
+.profile-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.profile-actions button {
+  flex: 1;
+  border: 1px solid var(--roblox-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--roblox-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px;
+}
+
+.profile-actions .primary {
+  border: 1px solid #f2f4f5;
+  background: #f2f4f5;
+  color: #191b1f;
+}
+
+.profile-message {
+  min-height: 18px;
+  margin-top: 10px;
+  color: var(--roblox-muted);
+  font-size: 12px;
+}
+
+.public-bio {
+  color: var(--roblox-text);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.content-modal {
+  position: relative;
+  width: min(980px, calc(100vw - 32px));
+  background: #111217;
+  border: 1px solid var(--roblox-border);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.58);
+  color: var(--roblox-text);
+  display: grid;
+  grid-template-columns: minmax(320px, 2fr) minmax(240px, 300px);
+  gap: 18px;
+  padding: 18px;
+}
+
+.content-modal .modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  background: rgba(17,18,23,0.86);
+}
+
+.content-art {
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  background: #050507;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.content-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.content-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.content-title {
+  margin: 0;
+  padding-right: 30px;
+  font-size: 32px;
+  line-height: 1.05;
+  font-weight: 900;
+  word-break: break-word;
+}
+
+.content-play {
+  width: 100%;
+  min-height: 60px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 8px;
+  background: #335fff;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.content-play:hover {
+  background: #416bff;
+}
+
+.content-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.content-action {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--roblox-text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+
+.content-action-icon {
+  width: 34px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 3px solid var(--roblox-border);
+  font-size: 23px;
+  line-height: 1;
+}
+
+.content-action-label {
+  max-width: 100%;
+  color: var(--roblox-text);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content-action.is-active .content-action-icon {
+  color: #ffffff;
+  border-bottom-color: #ffffff;
 }
 
 /* CATEGORIES */
 .categories {
+  position: fixed;
+  top: var(--topbar-height);
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
   display: flex;
-  gap: 10px;
-  padding: 10px 20px;
-  background: #0f1426;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
+  background: #111217;
+  border-right: 1px solid var(--roblox-border-soft);
+  z-index: 250;
+  box-sizing: border-box;
 }
 
 .categories button {
-  background: rgba(122, 44, 255, 0.15);
-  border: 1px solid rgba(122, 44, 255, 0.4);
-  color: #cfcfff;
-  padding: 6px 12px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--roblox-text);
+  padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+  font-weight: 700;
 }
 
 .categories button:hover {
-  background: rgba(122, 44, 255, 0.35);
-  transform: translateY(-2px);
+  background: var(--roblox-surface);
+  border-color: var(--roblox-border-soft);
+}
+
+.categories button.active {
+  background: var(--roblox-surface);
+  border-color: var(--roblox-border);
+  color: #ffffff;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  margin-bottom: 8px;
+  padding: 8px 10px !important;
+}
+
+.sidebar-profile .user-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.sidebar-profile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-section {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--roblox-border-soft);
+}
+
+.sidebar-label {
+  padding: 0 12px 8px;
+  color: var(--roblox-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.homepage-friends-strip {
+  margin-left: var(--sidebar-width);
+  padding: 16px 20px 0;
+}
+
+.homepage-friends-frame {
+  width: 100%;
+  height: 92px;
+  display: block;
+  border: 0;
+}
+
+.homepage-chat-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  height: 430px;
+  overflow: hidden;
+  z-index: 500;
+  filter: drop-shadow(0 16px 35px rgba(0,0,0,0.35));
+  transition: height 0.18s ease;
+}
+
+.homepage-chat-dock.is-collapsed {
+  height: 42px;
+}
+
+.homepage-chat-dock iframe,
+.homepage-chat-panel iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  border-radius: 12px;
+}
+
+.homepage-chat-panel {
+  position: fixed;
+  right: 270px;
+  bottom: 0;
+  width: 260px;
+  height: 430px;
+  display: none;
+  z-index: 501;
+  background: #191b1f;
+  border: 1px solid var(--roblox-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.48);
+}
+
+.homepage-chat-panel.is-open {
+  display: block;
+}
+
+.chat-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--roblox-border);
+  border-radius: 6px;
+  background: #232527;
+  color: var(--roblox-text);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.chat-panel-close:hover {
+  border-color: rgba(248,90,90,0.55);
+  color: #f85a5a;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 12px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .search {
+    width: min(42vw, 260px);
+  }
+
+  .top-user {
+    max-width: 120px;
+  }
+
+  .homepage-chat-dock {
+    right: 0;
+    bottom: 0;
+    height: 430px;
+    max-height: 55vh;
+  }
+
+  .homepage-chat-panel {
+    right: 270px;
+    bottom: 0;
+    width: 260px;
+    height: 430px;
+    max-height: 55vh;
+  }
+
+  .content-modal {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .content-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .homepage-chat-dock,
+  .homepage-chat-panel {
+    width: min(260px, 100vw);
+  }
+
+  .homepage-chat-panel {
+    right: 0;
+    bottom: calc(min(430px, 55vh) + 10px);
+  }
 }
 
 /* GRID */
@@ -101,32 +643,55 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 15px;
+  margin-left: var(--sidebar-width);
   padding: 20px;
+}
+
+.grid .card[data-category="Tools"] {
+  display: none;
 }
 
 /* CARD */
 .card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(122, 44, 255, 0.25);
-  border-radius: 15px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
-  transition: 0.25s;
-  backdrop-filter: blur(8px);
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
   position: relative;
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 10px 30px rgba(122, 44, 255, 0.25);
-  border-color: rgba(122, 44, 255, 0.6);
+  transform: translateY(-2px);
+  background: #191b1f;
+  border-color: var(--roblox-border);
+}
+
+.card.is-favorite::after {
+  content: "\2605";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(17,18,23,0.82);
+  border: 1px solid rgba(255,255,255,0.32);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  pointer-events: none;
 }
 
 .card img {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  filter: saturate(1.1) contrast(1.1);
+  border-radius: 8px;
+  filter: saturate(1.04) contrast(1.04);
 }
 
 .card-content {
@@ -142,6 +707,24 @@ body {
   margin: 5px 0 0;
   font-size: 12px;
   opacity: 0.7;
+}
+
+.card-score {
+  margin-top: 6px;
+  color: var(--roblox-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.card-score-star {
+  color: #ffffff;
+}
+
+.card-score-like {
+  color: #d7d7d7;
 }
 
 .rating-badge {
@@ -166,26 +749,48 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: #070a14;
+  background: #111217;
   display: none;
   flex-direction: column;
   z-index: 9999;
 }
 
 .overlayBar {
-  background: linear-gradient(90deg, #3b3bff, #7a2cff);
-  padding: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: rgba(25, 27, 31, 0.92);
+  border-bottom: 1px solid var(--roblox-border-soft);
+  padding: 8px 10px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .overlayBar button {
-  background: white;
-  border: none;
+  background: #f2f4f5;
+  border: 1px solid #f2f4f5;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
+  color: #191b1f;
+}
+
+#gameOverlay.game-mode .overlayBar {
+  right: auto;
+  background: transparent;
+  border-bottom: 0;
+  pointer-events: none;
+}
+
+#gameOverlay.game-mode .overlayBar button {
+  pointer-events: auto;
+  background: rgba(25, 27, 31, 0.82);
+  border: 1px solid var(--roblox-border);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
 
 #gameFrame {
@@ -227,16 +832,40 @@ body {
 <div class="topbar">
   <div class="logo">JustMathGames</div>
   <input class="search" placeholder="Search games and shows..." />
+  <button class="top-user" id="topUserButton" type="button" aria-label="Open profile settings">
+    <span class="user-avatar" id="topUserAvatar">G</span>
+    <span class="top-user-name" id="topUsername">Guest</span>
+  </button>
 </div>
 
-<!-- CATEGORIES -->
-<div class="categories">
-  <button onclick="filterCategory('All')">All</button>
-  <button onclick="filterCategory('Games')">Games</button>
-  <button onclick="filterCategory('Shows')">Shows</button>
-  <button onclick="filterCategory('Movies')">Movies</button>
-  <button onclick="filterCategory('Tools')">Tools</button>
-</div>
+<!-- SIDEBAR -->
+<aside class="categories" aria-label="Homepage navigation">
+  <button class="sidebar-profile" id="sidebarProfileButton" type="button" aria-label="Open profile settings">
+    <span class="user-avatar" id="sidebarUserAvatar">G</span>
+    <span class="sidebar-profile-name" id="sidebarUsername">Guest</span>
+  </button>
+  <button class="active" data-category-filter="All" onclick="filterCategory('All')">All</button>
+  <button data-category-filter="Games" onclick="filterCategory('Games')">Games</button>
+  <button data-category-filter="Shows" onclick="filterCategory('Shows')">Shows</button>
+  <button data-category-filter="Movies" onclick="filterCategory('Movies')">Movies</button>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Tools</div>
+    <button onclick="openSidebarTool('newtab','https://docs.google.com/forms/d/1RpPAYJTy91Fbu1iQpvIOxtA1d4a2pSsBhuiIry5OLas/edit')">Suggestions</button>
+    <button onclick="openSidebarTool('file','tools/changelog.html')">Changelog</button>
+    <button onclick="openSidebarTool('file','tools/chat.html')">Chat</button>
+    <button onclick="openSidebarTool('file','tools/Discord.html')">Discord</button>
+  </div>
+</aside>
+
+<section class="homepage-friends-strip" id="homepageFriendsStrip">
+  <iframe
+    id="friendsFullFrame"
+    class="homepage-friends-frame"
+    src="tools/widget-friends-full.html?mode=row"
+    title="Friends">
+  </iframe>
+</section>
 
 <!-- GAME GRID -->
 <div class="grid">
@@ -633,13 +1262,107 @@ body {
 
 </div>
 
+<div id="homeChatPanel" class="homepage-chat-panel" aria-hidden="true">
+  <button class="chat-panel-close" id="homeChatClose" type="button" aria-label="Close chat">&times;</button>
+  <iframe id="homeChatFrame" title="Chat"></iframe>
+</div>
+
+<div class="homepage-chat-dock is-collapsed" id="homeChatDock">
+  <iframe id="miniFriendsFrame" src="tools/widget-friends-mini.html" title="Friends and groups"></iframe>
+</div>
+
+<div class="modal-backdrop" id="profileSettingsModal" aria-hidden="true">
+  <div class="profile-modal">
+    <div class="profile-modal-header">
+      <h2>Profile Settings</h2>
+      <button class="modal-close" type="button" onclick="closeProfileSettings()" aria-label="Close profile settings">&times;</button>
+    </div>
+    <div class="profile-modal-body">
+      <div class="profile-row">
+        <div class="profile-avatar" id="settingsAvatar">G</div>
+        <div>
+          <div class="profile-name" id="settingsName">Guest</div>
+          <div class="profile-sub">Visible profile</div>
+        </div>
+      </div>
+
+      <label class="profile-field">
+        <span>Username</span>
+        <input id="profileUsernameInput" maxlength="20" autocomplete="off">
+      </label>
+      <label class="profile-field">
+        <span>Password</span>
+        <input id="profilePasswordInput" type="password" placeholder="New password" autocomplete="new-password">
+      </label>
+      <label class="profile-field">
+        <span>PFP URL</span>
+        <input id="profilePfpInput" placeholder="https://example.com/avatar.png" autocomplete="off">
+      </label>
+      <label class="profile-field">
+        <span>Bio</span>
+        <textarea id="profileBioInput" maxlength="220" placeholder="Write a short bio..."></textarea>
+      </label>
+      <div class="profile-actions">
+        <button type="button" onclick="closeProfileSettings()">Cancel</button>
+        <button class="primary" type="button" onclick="saveProfileSettings()">Save</button>
+      </div>
+      <div class="profile-message" id="profileSettingsMessage"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="publicProfileModal" aria-hidden="true">
+  <div class="profile-modal">
+    <div class="profile-modal-header">
+      <h2>Profile</h2>
+      <button class="modal-close" type="button" onclick="closePublicProfile()" aria-label="Close profile">&times;</button>
+    </div>
+    <div class="profile-modal-body">
+      <div class="profile-row">
+        <div class="profile-avatar" id="publicProfileAvatar">?</div>
+        <div>
+          <div class="profile-name" id="publicProfileName">User</div>
+          <div class="profile-sub" id="publicProfileHandle">@user</div>
+        </div>
+      </div>
+      <div class="public-bio" id="publicProfileBio">No bio set.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="contentDetailsModal" aria-hidden="true">
+  <div class="content-modal">
+    <button class="modal-close" type="button" onclick="closeContentDetails()" aria-label="Close details">&times;</button>
+    <div class="content-art">
+      <img id="contentDetailsImage" alt="">
+    </div>
+    <div class="content-side">
+      <h2 class="content-title" id="contentDetailsTitle">Title</h2>
+      <button class="content-play" id="contentPlayButton" type="button" aria-label="Play">&#9658;</button>
+      <div class="content-actions">
+        <button class="content-action" id="contentFavoriteButton" type="button">
+          <span class="content-action-icon">&#9733;</span>
+          <span class="content-action-label" id="contentFavoriteLabel">Favorite</span>
+        </button>
+        <button class="content-action" id="contentLikeButton" type="button">
+          <span class="content-action-icon">&#128077;</span>
+          <span class="content-action-label" id="contentLikeCount">0</span>
+        </button>
+        <button class="content-action" id="contentDislikeButton" type="button">
+          <span class="content-action-icon">&#128078;</span>
+          <span class="content-action-label" id="contentDislikeCount">0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- OVERLAY -->
 <div id="gameOverlay">
   <div class="overlayBar">
     <button onclick="closeGame()">⬅ Back</button>
     <select id="seasonSelect" onchange="changeSeason()" style="display:none;"></select>
     <select id="episodeSelect" onchange="changeEpisode()" style="display:none;"></select>
-    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
   </div>
 
   <!-- Games -->
@@ -661,12 +1384,36 @@ body {
 <script>
 const search = document.querySelector(".search");
 const cards = document.querySelectorAll(".card");
+const categoryButtons = document.querySelectorAll("[data-category-filter]");
+const topUserButton = document.getElementById("topUserButton");
+const topUsername = document.getElementById("topUsername");
+const topUserAvatar = document.getElementById("topUserAvatar");
+const sidebarProfileButton = document.getElementById("sidebarProfileButton");
+const sidebarUsername = document.getElementById("sidebarUsername");
+const sidebarUserAvatar = document.getElementById("sidebarUserAvatar");
 const overlay = document.getElementById("gameOverlay");
 const frame = document.getElementById("gameFrame");
 const showPlayer = document.getElementById("showPlayer");
 const showFrame = showPlayer.querySelector("iframe");
 const episodeSelect = document.getElementById("episodeSelect");
 const seasonSelect = document.getElementById("seasonSelect");
+const homeChatPanel = document.getElementById("homeChatPanel");
+const homeChatFrame = document.getElementById("homeChatFrame");
+const homeChatClose = document.getElementById("homeChatClose");
+const homeChatDock = document.getElementById("homeChatDock");
+const homepageFriendsStrip = document.getElementById("homepageFriendsStrip");
+const profileSettingsModal = document.getElementById("profileSettingsModal");
+const publicProfileModal = document.getElementById("publicProfileModal");
+const contentDetailsModal = document.getElementById("contentDetailsModal");
+const contentDetailsImage = document.getElementById("contentDetailsImage");
+const contentDetailsTitle = document.getElementById("contentDetailsTitle");
+const contentPlayButton = document.getElementById("contentPlayButton");
+const contentFavoriteButton = document.getElementById("contentFavoriteButton");
+const contentFavoriteLabel = document.getElementById("contentFavoriteLabel");
+const contentLikeButton = document.getElementById("contentLikeButton");
+const contentDislikeButton = document.getElementById("contentDislikeButton");
+const contentLikeCount = document.getElementById("contentLikeCount");
+const contentDislikeCount = document.getElementById("contentDislikeCount");
 
 document.querySelectorAll('.card[data-rating]').forEach(card => {
   const badge = document.createElement('span');
@@ -681,6 +1428,453 @@ let currentSeason = 1;
 let currentPlayer = 1;
 
 let currentCategory = "All";
+let currentDetailsCard = null;
+let favoriteItems = [];
+let favoriteTitles = [];
+let contentVotes = {};
+let contentStats = {};
+
+const CONTENT_STATS_USER_ID = "jmg_content_stats_v1";
+const LOCAL_FAVORITES_KEY = "jmg_favorite_items";
+const LOCAL_VOTES_KEY = "jmg_content_votes";
+const LOCAL_STATS_KEY = "jmg_content_stats";
+
+function refreshTopUsername() {
+  const profile = getStoredProfile();
+  topUsername.textContent = profile.username;
+  sidebarUsername.textContent = profile.username;
+  renderProfileAvatar(topUserAvatar, profile.username, profile.pfp);
+  renderProfileAvatar(sidebarUserAvatar, profile.username, profile.pfp);
+}
+
+function getDisplayUsername() {
+  try {
+    const loginUsername = localStorage.getItem("jmg_username");
+    if (!loginUsername) return "Guest";
+    return localStorage.getItem("jmg_profile_username") || loginUsername;
+  } catch {
+    return "Guest";
+  }
+}
+
+function getStoredProfile() {
+  return {
+    username: getDisplayUsername(),
+    loginUsername: localStorage.getItem("jmg_username") || "",
+    bio: localStorage.getItem("jmg_bio") || "",
+    pfp: localStorage.getItem("jmg_pfp") || ""
+  };
+}
+
+function profileInitial(name) {
+  return (name || "Guest")[0].toUpperCase();
+}
+
+function renderProfileAvatar(target, username, pfp) {
+  if (!target) return;
+  target.innerHTML = "";
+  if (pfp) {
+    const img = document.createElement("img");
+    img.src = pfp;
+    img.alt = "";
+    img.onerror = () => {
+      target.innerHTML = "";
+      target.textContent = profileInitial(username);
+    };
+    target.appendChild(img);
+    return;
+  }
+
+  target.textContent = profileInitial(username);
+}
+
+refreshTopUsername();
+window.addEventListener("storage", event => {
+  if (["jmg_username", "jmg_profile_username", "jmg_bio", "jmg_pfp"].includes(event.key)) {
+    refreshTopUsername();
+  }
+});
+
+topUserButton.addEventListener("click", openProfileSettings);
+sidebarProfileButton.addEventListener("click", openProfileSettings);
+
+function openProfileSettings() {
+  const profile = getStoredProfile();
+  const usernameInput = document.getElementById("profileUsernameInput");
+  const passwordInput = document.getElementById("profilePasswordInput");
+  usernameInput.value = profile.username === "Guest" ? "" : profile.username;
+  passwordInput.value = "";
+  usernameInput.disabled = !profile.loginUsername;
+  passwordInput.disabled = !profile.loginUsername;
+  usernameInput.placeholder = profile.loginUsername ? "" : "Sign in to change username";
+  passwordInput.placeholder = profile.loginUsername ? "New password" : "Sign in to change password";
+  document.getElementById("profilePfpInput").value = profile.pfp;
+  document.getElementById("profileBioInput").value = profile.bio;
+  document.getElementById("settingsName").textContent = profile.username;
+  document.getElementById("profileSettingsMessage").textContent = "";
+  renderProfileAvatar(document.getElementById("settingsAvatar"), profile.username, profile.pfp);
+  profileSettingsModal.classList.add("is-open");
+  profileSettingsModal.setAttribute("aria-hidden", "false");
+}
+
+function closeProfileSettings() {
+  profileSettingsModal.classList.remove("is-open");
+  profileSettingsModal.setAttribute("aria-hidden", "true");
+}
+
+async function saveProfileSettings() {
+  const loginUsername = localStorage.getItem("jmg_username") || "";
+  const username = loginUsername
+    ? (document.getElementById("profileUsernameInput").value.trim() || loginUsername)
+    : "Guest";
+  const password = document.getElementById("profilePasswordInput").value;
+  const pfp = document.getElementById("profilePfpInput").value.trim();
+  const bio = document.getElementById("profileBioInput").value.trim();
+  const message = document.getElementById("profileSettingsMessage");
+
+  if (loginUsername) {
+    localStorage.setItem("jmg_profile_username", username);
+  }
+  localStorage.setItem("jmg_pfp", pfp);
+  localStorage.setItem("jmg_bio", bio);
+  refreshTopUsername();
+  renderProfileAvatar(document.getElementById("settingsAvatar"), username, pfp);
+  document.getElementById("settingsName").textContent = username;
+
+  let savedRemotely = false;
+  try {
+    const token = localStorage.getItem("jmg_token");
+    if (token) {
+      const response = await fetch(`${BACKEND}/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username,
+          bio,
+          pfp,
+          password: password || undefined
+        })
+      });
+      savedRemotely = response.ok;
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (data.username) {
+          localStorage.setItem("jmg_username", data.username);
+          localStorage.setItem("jmg_profile_username", data.username);
+          refreshTopUsername();
+        }
+      }
+    }
+  } catch {}
+
+  message.textContent = savedRemotely
+    ? "Profile saved."
+    : password
+      ? "Profile saved here. Password changes need server support."
+      : "Profile saved on this browser.";
+}
+
+function closePublicProfile() {
+  publicProfileModal.classList.remove("is-open");
+  publicProfileModal.setAttribute("aria-hidden", "true");
+}
+
+async function openPublicProfile(username) {
+  if (!username) return;
+
+  const nameEl = document.getElementById("publicProfileName");
+  const handleEl = document.getElementById("publicProfileHandle");
+  const bioEl = document.getElementById("publicProfileBio");
+  const avatarEl = document.getElementById("publicProfileAvatar");
+
+  nameEl.textContent = username;
+  handleEl.textContent = "@" + username;
+  bioEl.textContent = "Loading profile...";
+  renderProfileAvatar(avatarEl, username, "");
+  publicProfileModal.classList.add("is-open");
+  publicProfileModal.setAttribute("aria-hidden", "false");
+
+  let profile = null;
+  const localProfile = getStoredProfile();
+  if (username === localProfile.loginUsername || username === localProfile.username) {
+    profile = localProfile;
+  }
+
+  if (!profile) {
+    try {
+      const token = localStorage.getItem("jmg_token");
+      const response = await fetch(`${BACKEND}/profile/${encodeURIComponent(username)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (response.ok) profile = await response.json();
+    } catch {}
+  }
+
+  profile = profile || { username, bio: "No bio set.", pfp: "" };
+  const displayName = profile.username || profile.displayName || username;
+  nameEl.textContent = displayName;
+  handleEl.textContent = "@" + username;
+  bioEl.textContent = profile.bio || "No bio set.";
+  renderProfileAvatar(avatarEl, displayName, profile.pfp || profile.avatar || profile.avatarUrl || "");
+}
+
+function getCardTitle(card) {
+  return card?.dataset.title || card?.querySelector("h3")?.textContent?.trim() || "Untitled";
+}
+
+function getCardImage(card) {
+  return card?.querySelector("img")?.getAttribute("src") || "";
+}
+
+function getContentKey(card) {
+  if (!card) return "";
+  if (card.dataset.contentKey) return card.dataset.contentKey;
+  const source = card.dataset.href || card.dataset.id || getCardTitle(card);
+  const key = `${card.dataset.type || "content"}:${source}`;
+  card.dataset.contentKey = key;
+  return key;
+}
+
+function normalizeStats(value) {
+  const result = {};
+  Object.entries(value || {}).forEach(([key, stats]) => {
+    result[key] = {
+      likes: Math.max(0, Number(stats?.likes) || 0),
+      dislikes: Math.max(0, Number(stats?.dislikes) || 0)
+    };
+  });
+  return result;
+}
+
+function getStatsForKey(key) {
+  if (!contentStats[key]) contentStats[key] = { likes: 0, dislikes: 0 };
+  return contentStats[key];
+}
+
+function getCardScore(card) {
+  const stats = getStatsForKey(getContentKey(card));
+  return stats.likes - stats.dislikes;
+}
+
+function isFavoriteCard(card) {
+  const key = getContentKey(card);
+  const title = getCardTitle(card);
+  return favoriteItems.includes(key) || favoriteTitles.includes(title);
+}
+
+function formatCount(value) {
+  const n = Math.max(0, Number(value) || 0);
+  if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`;
+  return String(n);
+}
+
+function refreshCardFavoriteStates() {
+  cards.forEach(card => {
+    const showScore = card.dataset.category !== "Tools";
+    const favorite = showScore && isFavoriteCard(card);
+    card.classList.toggle("is-favorite", favorite);
+
+    let scoreEl = card.querySelector(".card-score");
+    if (!showScore) {
+      scoreEl?.remove();
+      return;
+    }
+
+    if (!scoreEl) {
+      scoreEl = document.createElement("div");
+      scoreEl.className = "card-score";
+      const categoryEl = card.querySelector(".card-content p");
+      categoryEl?.insertAdjacentElement("afterend", scoreEl);
+    }
+
+    scoreEl.innerHTML = `${favorite ? '<span class="card-score-star">&#9733;</span>' : ''}<span class="card-score-like">&#128077;</span><span>${getCardScore(card)}</span>`;
+  });
+}
+
+function sortCards() {
+  const grid = document.querySelector(".grid");
+  const sortedCards = Array.from(cards).sort((a, b) => {
+    const aTool = a.dataset.category === "Tools";
+    const bTool = b.dataset.category === "Tools";
+    if (aTool !== bTool) return aTool ? 1 : -1;
+
+    const aFav = isFavoriteCard(a);
+    const bFav = isFavoriteCard(b);
+    if (aFav !== bFav) return aFav ? -1 : 1;
+
+    const scoreDiff = getCardScore(b) - getCardScore(a);
+    if (scoreDiff) return scoreDiff;
+
+    return getCardTitle(a).localeCompare(getCardTitle(b), undefined, { sensitivity: "base" });
+  });
+
+  sortedCards.forEach(card => grid.appendChild(card));
+}
+
+function refreshContentOrdering() {
+  refreshCardFavoriteStates();
+  sortCards();
+  applyFilters();
+}
+
+function updateContentDetailsUi() {
+  if (!currentDetailsCard) return;
+
+  const key = getContentKey(currentDetailsCard);
+  const stats = getStatsForKey(key);
+  const vote = contentVotes[key] || "";
+  const favorite = isFavoriteCard(currentDetailsCard);
+
+  contentFavoriteButton.classList.toggle("is-active", favorite);
+  contentLikeButton.classList.toggle("is-active", vote === "like");
+  contentDislikeButton.classList.toggle("is-active", vote === "dislike");
+  contentFavoriteLabel.textContent = favorite ? "Favorited" : "Favorite";
+  contentLikeCount.textContent = formatCount(stats.likes);
+  contentDislikeCount.textContent = formatCount(stats.dislikes);
+}
+
+function openContentDetails(card) {
+  currentDetailsCard = card;
+  contentDetailsTitle.textContent = getCardTitle(card);
+  contentDetailsImage.src = getCardImage(card);
+  contentDetailsImage.alt = getCardTitle(card);
+  updateContentDetailsUi();
+  contentDetailsModal.classList.add("is-open");
+  contentDetailsModal.setAttribute("aria-hidden", "false");
+}
+
+function closeContentDetails() {
+  contentDetailsModal.classList.remove("is-open");
+  contentDetailsModal.setAttribute("aria-hidden", "true");
+  currentDetailsCard = null;
+}
+
+function launchContentCard(card) {
+  const type = card.dataset.type;
+  closeContentDetails();
+
+  if (type === "file") {
+    overlay.style.display = "flex";
+    openGame(card.dataset.href);
+  }
+
+  if (type === "show") {
+    overlay.style.display = "flex";
+    openShow(
+      JSON.parse(card.dataset.seasons),
+      card.dataset.id,
+      card.dataset.player
+    );
+  }
+}
+
+function setLocalContentCache() {
+  localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(favoriteItems));
+  localStorage.setItem(LOCAL_VOTES_KEY, JSON.stringify(contentVotes));
+  localStorage.setItem(LOCAL_STATS_KEY, JSON.stringify(contentStats));
+}
+
+async function saveContentUserData() {
+  setLocalContentCache();
+  const favoriteTitleList = Array.from(new Set(
+    Array.from(cards)
+      .filter(card => card.dataset.category !== "Tools" && isFavoriteCard(card))
+      .map(getCardTitle)
+  ));
+
+  try {
+    await fetch(`${BACKEND}/user/${getUserId()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        favorites: favoriteTitleList,
+        favoriteItems,
+        contentVotes
+      })
+    });
+  } catch {}
+}
+
+async function loadGlobalContentStats() {
+  try {
+    const res = await fetch(`${BACKEND}/user/${CONTENT_STATS_USER_ID}`);
+    const data = await res.json();
+    contentStats = normalizeStats(data.contentStats || {});
+    localStorage.setItem(LOCAL_STATS_KEY, JSON.stringify(contentStats));
+    return;
+  } catch {}
+
+  try {
+    contentStats = normalizeStats(JSON.parse(localStorage.getItem(LOCAL_STATS_KEY) || "{}"));
+  } catch {
+    contentStats = {};
+  }
+}
+
+async function saveGlobalContentStats() {
+  setLocalContentCache();
+  try {
+    await fetch(`${BACKEND}/user/${CONTENT_STATS_USER_ID}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentStats })
+    });
+  } catch {}
+}
+
+async function toggleCurrentFavorite() {
+  if (!currentDetailsCard) return;
+  const key = getContentKey(currentDetailsCard);
+  const title = getCardTitle(currentDetailsCard);
+  const isFavorite = isFavoriteCard(currentDetailsCard);
+
+  favoriteItems = favoriteItems.filter(item => item !== key);
+  favoriteTitles = favoriteTitles.filter(item => item !== title);
+
+  if (!isFavorite) {
+    favoriteItems.push(key);
+    favoriteTitles.push(title);
+  }
+
+  refreshContentOrdering();
+  updateContentDetailsUi();
+  await saveContentUserData();
+}
+
+async function setCurrentVote(nextVote) {
+  if (!currentDetailsCard) return;
+  const key = getContentKey(currentDetailsCard);
+  const previousVote = contentVotes[key] || "";
+  const finalVote = previousVote === nextVote ? "" : nextVote;
+  const stats = getStatsForKey(key);
+
+  if (previousVote === "like") stats.likes = Math.max(0, stats.likes - 1);
+  if (previousVote === "dislike") stats.dislikes = Math.max(0, stats.dislikes - 1);
+  if (finalVote === "like") stats.likes += 1;
+  if (finalVote === "dislike") stats.dislikes += 1;
+
+  if (finalVote) contentVotes[key] = finalVote;
+  else delete contentVotes[key];
+
+  refreshContentOrdering();
+  updateContentDetailsUi();
+  await Promise.all([saveContentUserData(), saveGlobalContentStats()]);
+}
+
+contentPlayButton.addEventListener("click", () => {
+  if (currentDetailsCard) launchContentCard(currentDetailsCard);
+});
+contentFavoriteButton.addEventListener("click", toggleCurrentFavorite);
+contentLikeButton.addEventListener("click", () => setCurrentVote("like"));
+contentDislikeButton.addEventListener("click", () => setCurrentVote("dislike"));
+
+contentDetailsModal.addEventListener("click", event => {
+  if (event.target === contentDetailsModal) closeContentDetails();
+});
 
 /* SEARCH */
 search.addEventListener("input", applyFilters);
@@ -704,6 +1898,9 @@ function applyFilters() {
 /* CATEGORY FILTER */
 function filterCategory(category) {
   currentCategory = category;
+  categoryButtons.forEach(button => {
+    button.classList.toggle("active", button.dataset.categoryFilter === category);
+  });
   applyFilters();
 }
 
@@ -712,10 +1909,14 @@ cards.forEach(card => {
   card.addEventListener("click", () => {
     const type = card.dataset.type;
 
-    overlay.style.display = "flex";
-
     if (type === "file") {
-      openGame(card.dataset.href);
+      if (card.dataset.category === "Tools") {
+        overlay.style.display = "flex";
+        openGame(card.dataset.href);
+        return;
+      }
+
+      openContentDetails(card);
     }
 
     if (type === "newtab") {
@@ -723,19 +1924,17 @@ cards.forEach(card => {
     }
 
     if (type === "show") {
-      openShow(
-        JSON.parse(card.dataset.seasons),
-        card.dataset.id,
-        card.dataset.player
-      );
+      openContentDetails(card);
     }
   });
 });
 
 /* OPEN GAME */
 function openGame(url) {
+  overlay.classList.add("game-mode");
   frame.style.display = "block";
   showPlayer.style.display = "none";
+  seasonSelect.style.display = "none";
   episodeSelect.style.display = "none";
 
   frame.src = url;
@@ -759,6 +1958,7 @@ function populateEpisodes(season) {
 }
   
 function openShow(seasons, id, player) {
+  overlay.classList.remove("game-mode");
   frame.style.display = "none";
   showPlayer.style.display = "block";
 
@@ -803,6 +2003,7 @@ function changeSeason() {
 /* CLOSE */
 function closeGame() {
   overlay.style.display = "none";
+  overlay.classList.remove("game-mode");
 
   frame.src = "";
   showFrame.src = "";
@@ -812,6 +2013,67 @@ function closeGame() {
   seasonSelect.style.display = "none";
   episodeSelect.style.display = "none";
 }
+
+function openSidebarTool(type, href) {
+  if (type === "newtab") {
+    window.open(href, "_blank");
+    return;
+  }
+
+  overlay.style.display = "flex";
+  overlay.classList.remove("game-mode");
+  frame.style.display = "block";
+  showPlayer.style.display = "none";
+  seasonSelect.style.display = "none";
+  episodeSelect.style.display = "none";
+  showFrame.src = "";
+  frame.src = href;
+}
+
+function openHomeChat(type, id, name) {
+  const params = new URLSearchParams();
+  let widgetUrl = "tools/widget-dm-chat.html";
+
+  if (type === "group") {
+    widgetUrl = "tools/widget-group-chat.html";
+    params.set("groupId", id);
+    params.set("groupName", name || id);
+  } else {
+    params.set("target", id || name);
+  }
+
+  homeChatFrame.src = `${widgetUrl}?${params.toString()}`;
+  homeChatFrame.title = `${name || id} chat`;
+  homeChatPanel.classList.add("is-open");
+  homeChatPanel.setAttribute("aria-hidden", "false");
+}
+
+homeChatClose.addEventListener("click", () => {
+  homeChatPanel.classList.remove("is-open");
+  homeChatPanel.setAttribute("aria-hidden", "true");
+  homeChatFrame.src = "";
+});
+
+window.addEventListener("message", event => {
+  const data = event.data || {};
+  if (data.source !== "jmg-widget") return;
+
+  if (data.action === "toggleMiniFriends") {
+    homeChatDock.classList.toggle("is-collapsed");
+  }
+
+  if (data.action === "openChat") {
+    openHomeChat(data.type, data.id, data.name);
+  }
+
+  if (data.action === "openProfile") {
+    openPublicProfile(data.username || data.name || data.id);
+  }
+
+  if (data.action === "openFriendsList") {
+    homepageFriendsStrip.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
 
 // ================================================================
 // CONFIG
@@ -1085,30 +2347,29 @@ window.addEventListener('beforeunload', () => {
 async function initUserData() {
   const data = await restoreSavesFromBackend();
   await refreshCache();
+  await loadGlobalContentStats();
 
-  // Highlight favorited cards in gold
-  const favs = data.favorites || [];
-  document.querySelectorAll('.card').forEach(card => {
-    const name = card.querySelector('h3')?.textContent;
-    if (favs.includes(name)) card.style.borderColor = 'rgba(255, 200, 0, 0.7)';
-  });
+  favoriteTitles = Array.isArray(data.favorites) ? data.favorites : [];
+  favoriteItems = Array.isArray(data.favoriteItems) ? data.favoriteItems : [];
+  contentVotes = data.contentVotes || {};
+
+  if (!favoriteItems.length && favoriteTitles.length) {
+    favoriteItems = Array.from(cards)
+      .filter(card => favoriteTitles.includes(getCardTitle(card)))
+      .map(getContentKey);
+  }
+
+  try {
+    const localFavorites = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || "[]");
+    const localVotes = JSON.parse(localStorage.getItem(LOCAL_VOTES_KEY) || "{}");
+    favoriteItems = Array.from(new Set([...favoriteItems, ...localFavorites]));
+    contentVotes = { ...localVotes, ...contentVotes };
+  } catch {}
+
+  refreshContentOrdering();
 }
 
 initUserData();
-  
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-}
-
-document.addEventListener('fullscreenchange', () => {
-  const isFs = !!document.fullscreenElement;
-  document.querySelector('.overlayBar').classList.toggle('hidden', isFs);
-  document.getElementById('fullscreenBtn').textContent = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
-});
 </script>
 </body>
 </html>
