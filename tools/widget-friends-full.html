@@ -162,6 +162,7 @@ html.popup-mode .fl-grid::-webkit-scrollbar-thumb { background: #4b4e57; border-
   transition: all 0.15s;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 .fl-card::before {
   content: '';
@@ -169,10 +170,16 @@ html.popup-mode .fl-grid::-webkit-scrollbar-thumb { background: #4b4e57; border-
   inset: 0;
   background: #232527;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s;
+  z-index: 0;
 }
 .fl-card:hover { border-color: #5f626a; transform: translateY(-1px); }
 .fl-card:hover::before { opacity: 1; }
+.fl-card > * {
+  position: relative;
+  z-index: 1;
+}
 .fl-card-avatar {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -231,8 +238,10 @@ html.popup-mode .fl-grid::-webkit-scrollbar-thumb { background: #4b4e57; border-
 .fl-card-dm-btn:hover { background: #2b2d33; border-color: #5f626a; }
 .fl-card-actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
   flex-shrink: 0;
+  width: 84px;
 }
 .fl-card-dm-btn.danger:hover {
   border-color: var(--red);
