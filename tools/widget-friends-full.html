@@ -230,7 +230,6 @@ html.row-mode .fl-loading {
     <div class="fl-filter">
       <button class="fl-filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
       <button class="fl-filter-btn" data-filter="online" onclick="setFilter('online',this)">Online</button>
-      <button class="fl-filter-btn" data-filter="groups" onclick="setFilter('groups',this)">Groups</button>
     </div>
   </div>
   <div class="fl-grid" id="fl-grid">
@@ -250,11 +249,34 @@ html.row-mode .fl-loading {
   document.documentElement.classList.toggle('row-mode', rowMode);
 
   let allFriends = [];
-  let allGroups  = [];
   let currentFilter = 'all';
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function initial(name) { return (name||'?')[0].toUpperCase(); }
+  function normalizeFriend(friend) {
+    if (typeof friend === 'string') {
+      return {
+        username: friend,
+        online: false,
+        statusClass: 'offline',
+        statusText: 'Offline'
+      };
+    }
+
+    const username = friend?.username || friend?.name || friend?.user || friend?.displayName || '';
+    const rawStatus = String(friend?.status || friend?.presence || '').toLowerCase();
+    const lastSeenTime = friend?.lastSeen ? Date.parse(friend.lastSeen) : 0;
+    const recentlySeen = Number.isFinite(lastSeenTime) && Date.now() - lastSeenTime < 5 * 60 * 1000;
+    const playing = rawStatus === 'playing' || Boolean(friend?.playing || friend?.activity);
+    const online = playing || friend?.online === true || rawStatus === 'online' || rawStatus === 'active' || recentlySeen;
+
+    return {
+      username,
+      online,
+      statusClass: playing ? 'playing' : online ? 'online' : 'offline',
+      statusText: playing ? (friend.activity || 'Playing') : online ? 'Online' : 'Offline'
+    };
+  }
 
   window.__jmgOpenWidgetChat = function(type, id, name) {
     if (window.__jmgOpenChat) window.__jmgOpenChat(type, id, name);
@@ -298,48 +320,30 @@ html.row-mode .fl-loading {
       return;
     }
 
-    const showFriends = currentFilter !== 'groups';
-    const showGroups  = currentFilter !== 'online';
+    const filteredFriends = allFriends
+      .filter(friend => friend.username.toLowerCase().includes(query))
+      .filter(friend => currentFilter !== 'online' || friend.online);
 
-    const filteredFriends = allFriends.filter(u => u.toLowerCase().includes(query));
-    const filteredGroups  = allGroups.filter(g => g.name.toLowerCase().includes(query));
-
-    if (showFriends && filteredFriends.length) {
+    if (filteredFriends.length) {
       html += `<div class="fl-section-label">Friends - ${filteredFriends.length}</div>`;
-      html += filteredFriends.map(u => `
-        <div class="fl-card" onclick="window.__jmgOpenWidgetChat('dm','${esc(u)}','${esc(u)}')">
-          <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(u)}')">
-            ${initial(u)}
-            <div class="status-pip offline"></div>
+      html += filteredFriends.map(friend => `
+        <div class="fl-card" onclick="window.__jmgOpenWidgetChat('dm','${esc(friend.username)}','${esc(friend.username)}')">
+          <div class="fl-card-avatar" onclick="event.stopPropagation();window.__jmgOpenProfileWidget('${esc(friend.username)}')">
+            ${initial(friend.username)}
+            <div class="status-pip ${friend.statusClass}"></div>
           </div>
           <div class="fl-card-info">
-            <div class="fl-card-name">${esc(u)}</div>
-            <div class="fl-card-handle">@${esc(u)}</div>
-            <div class="fl-card-status offline">Offline</div>
+            <div class="fl-card-name">${esc(friend.username)}</div>
+            <div class="fl-card-handle">@${esc(friend.username)}</div>
+            <div class="fl-card-status ${friend.statusClass}">${esc(friend.statusText)}</div>
           </div>
-          <button class="fl-card-dm-btn" onclick="event.stopPropagation();window.__jmgOpenWidgetChat('dm','${esc(u)}','${esc(u)}')">DM</button>
-        </div>
-      `).join('');
-    }
-
-    if (showGroups && filteredGroups.length) {
-      html += `<div class="fl-section-label">Groups - ${filteredGroups.length}</div>`;
-      html += filteredGroups.map(g => `
-        <div class="fl-card" onclick="window.__jmgOpenWidgetChat('group','${esc(g._id)}','${esc(g.name)}')">
-          <div class="fl-card-avatar group">${initial(g.name)}</div>
-          <div class="fl-card-info">
-            <div class="fl-card-name">${esc(g.name)}</div>
-            <div class="fl-card-handle">${g.members.length} member${g.members.length!==1?'s':''}</div>
-            <div class="fl-card-status" style="color:var(--accent2)">Group</div>
-          </div>
-          <button class="fl-card-dm-btn" style="border-color:var(--border);color:var(--accent2);background:var(--surface2)"
-            onclick="event.stopPropagation();window.__jmgOpenWidgetChat('group','${esc(g._id)}','${esc(g.name)}')">Open</button>
+          <button class="fl-card-dm-btn" onclick="event.stopPropagation();window.__jmgOpenWidgetChat('dm','${esc(friend.username)}','${esc(friend.username)}')">DM</button>
         </div>
       `).join('');
     }
 
     if (!html) {
-      html = `<div class="fl-empty">No friends found</div>`;
+      html = `<div class="fl-empty">${currentFilter === 'online' ? 'No online friends' : 'No friends found'}</div>`;
     }
 
     grid.innerHTML = html;
@@ -348,13 +352,9 @@ html.row-mode .fl-loading {
   async function load() {
     if (!token || !me) { renderGrid(); return; }
     try {
-      const [fr, gr] = await Promise.all([
-        fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } }),
-        fetch(`${BACKEND}/groups`,  { headers:{ Authorization:`Bearer ${token}` } })
-      ]);
+      const fr = await fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } });
       const fd = await fr.json();
-      allFriends = fd.friends || [];
-      allGroups  = await gr.json();
+      allFriends = (fd.friends || []).map(normalizeFriend).filter(friend => friend.username);
       renderGrid();
     } catch {
       document.getElementById('fl-grid').innerHTML = '<div class="fl-empty">Could not load friends</div>';

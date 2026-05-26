@@ -9,17 +9,18 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #080c14;
-      --surface:  #0e1422;
-      --surface2: #141c2e;
-      --border:   rgba(80,120,255,0.13);
-      --accent:   #4f6fff;
-      --accent2:  #7c3aff;
+      --bg:       #121215;
+      --surface:  #191b1f;
+      --surface2: #232527;
+      --border:   #34373d;
+      --accent:   #f2f4f5;
+      --accent2:  #b8b8b8;
       --green:    #22d3a5;
       --red:      #f85a5a;
       --yellow:   #f5c842;
-      --text:     #d4defc;
-      --muted:    rgba(180,200,255,0.35);
+      --link:     #00a2ff;
+      --text:     #f2f4f5;
+      --muted:    #b8b8b8;
       --sidebar-w: 260px;
     }
 
@@ -150,7 +151,7 @@
       padding: 6px 0;
     }
     .sidebar-list::-webkit-scrollbar { width: 4px; }
-    .sidebar-list::-webkit-scrollbar-thumb { background: rgba(79,111,255,0.2); border-radius: 2px; }
+    .sidebar-list::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 2px; }
 
     .sidebar-item {
       display: flex;
@@ -163,7 +164,7 @@
     }
     .sidebar-item:hover { background: var(--surface2); }
     .sidebar-item.active {
-      background: rgba(79,111,255,0.08);
+      background: #232527;
       border-left-color: var(--accent);
     }
     .sidebar-item .avatar {
@@ -311,7 +312,7 @@
       gap: 6px;
     }
     .messages::-webkit-scrollbar { width: 5px; }
-    .messages::-webkit-scrollbar-thumb { background: rgba(79,111,255,0.2); border-radius: 3px; }
+    .messages::-webkit-scrollbar-thumb { background: #4b4e57; border-radius: 3px; }
 
     .msg-day {
       text-align: center;
@@ -429,10 +430,10 @@
     .input-bar textarea:focus { border-color: var(--accent); }
     .send-btn {
       padding: 10px 20px;
-      border-radius: 10px;
+      border-radius: 8px;
       border: none;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white;
+      background: #f2f4f5;
+      color: #191b1f;
       font-weight: 600;
       font-size: 14px;
       font-family: 'DM Sans', sans-serif;
@@ -469,10 +470,10 @@
     .login-gate p { color: var(--muted); font-size: 14px; }
     .btn-primary {
       padding: 11px 28px;
-      border-radius: 10px;
+      border-radius: 8px;
       border: none;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white;
+      background: #f2f4f5;
+      color: #191b1f;
       font-size: 15px;
       font-weight: 600;
       font-family: 'DM Sans', sans-serif;
@@ -559,8 +560,16 @@
       transition: all 0.15s;
     }
     .btn-cancel:hover { border-color: var(--text); color: var(--text); }
-    .modal .switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; cursor: pointer; }
-    .modal .switch span { color: var(--accent); text-decoration: underline; cursor: pointer; }
+    .modal .switch {
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 12px;
+      cursor: pointer;
+      line-height: 1.35;
+    }
+    .modal .switch span { color: var(--link); text-decoration: underline; cursor: pointer; }
 
     /* group member tags */
     .tag-input-wrap {
@@ -588,8 +597,8 @@
       min-width: 80px;
     }
     .tag {
-      background: rgba(79,111,255,0.15);
-      border: 1px solid rgba(79,111,255,0.25);
+      background: #232527;
+      border: 1px solid var(--border);
       color: var(--accent);
       border-radius: 5px;
       padding: 2px 8px;
@@ -637,7 +646,7 @@
     <div class="modal-btns">
       <button class="btn-primary" id="authSubmit">Log In</button>
     </div>
-    <div class="modal switch" id="authSwitch">No account? <span onclick="switchAuthMode()">Sign up</span></div>
+    <div class="switch" id="authSwitch">No account? <span onclick="switchAuthMode()">Sign up</span></div>
   </div>
 </div>
 
@@ -835,6 +844,41 @@
     return id;
   }
 
+  function getProfilePfp(profile) {
+    return profile?.pfp ?? profile?.avatar ?? profile?.avatarUrl;
+  }
+
+  function storeProfileFields(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    const pfp = getProfilePfp(profile);
+
+    if (profile.username) localStorage.setItem('jmg_profile_username', profile.username);
+    if (profile.bio !== undefined) localStorage.setItem('jmg_bio', profile.bio || '');
+    if (pfp !== undefined) localStorage.setItem('jmg_pfp', pfp || '');
+
+    return true;
+  }
+
+  async function syncOwnProfile() {
+    if (!token || !me) return;
+    try {
+      const response = await fetch(`${BACKEND}/profile/${encodeURIComponent(me)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) return;
+      storeProfileFields(await response.json());
+    } catch {}
+  }
+
+  function notifyAuthChanged() {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        source: 'jmg-widget',
+        action: 'authChanged'
+      }, '*');
+    }
+  }
+
   // ================================================================
   // AUTH
   // ================================================================
@@ -903,7 +947,8 @@
       localStorage.setItem('jmg_token', token);
       localStorage.setItem('jmg_username', me);
       closeModal('authModalBg');
-      initLoggedIn();
+      await initLoggedIn();
+      notifyAuthChanged();
     } catch {
       $('authError').textContent = 'Something went wrong';
     }
@@ -915,8 +960,10 @@
 
   function logout() {
     token = null; me = null;
-    localStorage.removeItem('jmg_token');
-    localStorage.removeItem('jmg_username');
+    ['jmg_token','jmg_username','jmg_profile_username','jmg_bio','jmg_pfp'].forEach(key => {
+      localStorage.removeItem(key);
+    });
+    notifyAuthChanged();
     location.reload();
   }
 
@@ -938,6 +985,8 @@
   }
 
   async function initLoggedIn() {
+    closeModal('authModalBg');
+    await syncOwnProfile();
     updateTopbar();
     $('loginGate').style.display = 'none';
     await Promise.all([loadFriends(), loadGroups()]);

@@ -298,6 +298,15 @@ body {
   color: #191b1f;
 }
 
+.profile-actions .danger {
+  border-color: rgba(248,90,90,0.55);
+  color: #f85a5a;
+}
+
+.profile-actions .danger:hover {
+  background: rgba(248,90,90,0.1);
+}
+
 .profile-message {
   min-height: 18px;
   margin-top: 10px;
@@ -853,7 +862,6 @@ body {
     <div class="sidebar-label">Tools</div>
     <button onclick="openSidebarTool('newtab','https://docs.google.com/forms/d/1RpPAYJTy91Fbu1iQpvIOxtA1d4a2pSsBhuiIry5OLas/edit')">Suggestions</button>
     <button onclick="openSidebarTool('file','tools/changelog.html')">Changelog</button>
-    <button onclick="openSidebarTool('file','tools/chat.html')">Chat</button>
     <button onclick="openSidebarTool('file','tools/Discord.html')">Discord</button>
   </div>
 </aside>
@@ -1303,6 +1311,7 @@ body {
         <textarea id="profileBioInput" maxlength="220" placeholder="Write a short bio..."></textarea>
       </label>
       <div class="profile-actions">
+        <button class="danger" type="button" onclick="logoutFromProfile()">Log Out</button>
         <button type="button" onclick="closeProfileSettings()">Cancel</button>
         <button class="primary" type="button" onclick="saveProfileSettings()">Save</button>
       </div>
@@ -1466,6 +1475,60 @@ function getStoredProfile() {
   };
 }
 
+function getProfilePfp(profile) {
+  return profile?.pfp ?? profile?.avatar ?? profile?.avatarUrl;
+}
+
+function storeProfileFields(profile) {
+  if (!profile || typeof profile !== "object") return false;
+  const pfp = getProfilePfp(profile);
+
+  if (profile.username) {
+    localStorage.setItem("jmg_profile_username", profile.username);
+  }
+  if (profile.bio !== undefined) {
+    localStorage.setItem("jmg_bio", profile.bio || "");
+  }
+  if (pfp !== undefined) {
+    localStorage.setItem("jmg_pfp", pfp || "");
+  }
+
+  return true;
+}
+
+async function syncStoredProfileFromServer() {
+  const token = localStorage.getItem("jmg_token");
+  const loginUsername = localStorage.getItem("jmg_username");
+  if (!token || !loginUsername) return;
+
+  try {
+    const response = await fetch(`${BACKEND}/profile/${encodeURIComponent(loginUsername)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) return;
+    const profile = await response.json();
+    if (storeProfileFields(profile)) {
+      refreshTopUsername();
+      notifyChatFramesAuthChanged();
+    }
+  } catch {}
+}
+
+function notifyChatFramesAuthChanged() {
+  [homeChatFrame, document.getElementById("miniFriendsFrame")].forEach(targetFrame => {
+    targetFrame?.contentWindow?.postMessage({
+      source: "jmg-host",
+      action: "authChanged"
+    }, "*");
+  });
+}
+
+function reloadFriendsFrames() {
+  [document.getElementById("friendsFullFrame"), document.getElementById("miniFriendsFrame")].forEach(targetFrame => {
+    if (targetFrame) targetFrame.src = targetFrame.getAttribute("src") || targetFrame.src;
+  });
+}
+
 function profileInitial(name) {
   return (name || "Guest")[0].toUpperCase();
 }
@@ -1490,16 +1553,28 @@ function renderProfileAvatar(target, username, pfp) {
 
 refreshTopUsername();
 window.addEventListener("storage", event => {
-  if (["jmg_username", "jmg_profile_username", "jmg_bio", "jmg_pfp"].includes(event.key)) {
+  if (["jmg_token", "jmg_username", "jmg_profile_username", "jmg_bio", "jmg_pfp"].includes(event.key)) {
     refreshTopUsername();
+    notifyChatFramesAuthChanged();
+    if (event.key === "jmg_token" || event.key === "jmg_username") reloadFriendsFrames();
   }
 });
 
 topUserButton.addEventListener("click", openProfileSettings);
 sidebarProfileButton.addEventListener("click", openProfileSettings);
 
+function openLoginScreen() {
+  closeProfileSettings();
+  openSidebarTool("file", "tools/chat.html?auth=login");
+}
+
 function openProfileSettings() {
   const profile = getStoredProfile();
+  if (!profile.loginUsername) {
+    openLoginScreen();
+    return;
+  }
+
   const usernameInput = document.getElementById("profileUsernameInput");
   const passwordInput = document.getElementById("profilePasswordInput");
   usernameInput.value = profile.username === "Guest" ? "" : profile.username;
@@ -1538,6 +1613,7 @@ async function saveProfileSettings() {
   localStorage.setItem("jmg_pfp", pfp);
   localStorage.setItem("jmg_bio", bio);
   refreshTopUsername();
+  notifyChatFramesAuthChanged();
   renderProfileAvatar(document.getElementById("settingsAvatar"), username, pfp);
   document.getElementById("settingsName").textContent = username;
 
@@ -1561,11 +1637,13 @@ async function saveProfileSettings() {
       savedRemotely = response.ok;
       if (response.ok) {
         const data = await response.json().catch(() => ({}));
+        storeProfileFields(data);
         if (data.username) {
           localStorage.setItem("jmg_username", data.username);
           localStorage.setItem("jmg_profile_username", data.username);
-          refreshTopUsername();
         }
+        refreshTopUsername();
+        notifyChatFramesAuthChanged();
       }
     }
   } catch {}
@@ -1575,6 +1653,24 @@ async function saveProfileSettings() {
     : password
       ? "Profile saved here. Password changes need server support."
       : "Profile saved on this browser.";
+}
+
+function logoutFromProfile() {
+  [
+    "jmg_token",
+    "jmg_username",
+    "jmg_profile_username",
+    "jmg_bio",
+    "jmg_pfp"
+  ].forEach(key => localStorage.removeItem(key));
+
+  refreshTopUsername();
+  notifyChatFramesAuthChanged();
+  reloadFriendsFrames();
+  homeChatPanel.classList.remove("is-open");
+  homeChatPanel.setAttribute("aria-hidden", "true");
+  homeChatFrame.src = "";
+  closeProfileSettings();
 }
 
 function closePublicProfile() {
@@ -2021,7 +2117,7 @@ function openSidebarTool(type, href) {
   }
 
   overlay.style.display = "flex";
-  overlay.classList.remove("game-mode");
+  overlay.classList.add("game-mode");
   frame.style.display = "block";
   showPlayer.style.display = "none";
   seasonSelect.style.display = "none";
@@ -2034,7 +2130,9 @@ function openHomeChat(type, id, name) {
   const params = new URLSearchParams();
   let widgetUrl = "tools/widget-dm-chat.html";
 
-  if (type === "group") {
+  if (type === "global") {
+    widgetUrl = "tools/widget-global-chat.html";
+  } else if (type === "group") {
     widgetUrl = "tools/widget-group-chat.html";
     params.set("groupId", id);
     params.set("groupName", name || id);
@@ -2042,8 +2140,9 @@ function openHomeChat(type, id, name) {
     params.set("target", id || name);
   }
 
-  homeChatFrame.src = `${widgetUrl}?${params.toString()}`;
-  homeChatFrame.title = `${name || id} chat`;
+  const query = params.toString();
+  homeChatFrame.src = query ? `${widgetUrl}?${query}` : widgetUrl;
+  homeChatFrame.title = `${name || id || "Global"} chat`;
   homeChatPanel.classList.add("is-open");
   homeChatPanel.setAttribute("aria-hidden", "false");
 }
@@ -2073,12 +2172,24 @@ window.addEventListener("message", event => {
   if (data.action === "openFriendsList") {
     homepageFriendsStrip.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  if (data.action === "showLogin") {
+    openLoginScreen();
+  }
+
+  if (data.action === "authChanged") {
+    syncStoredProfileFromServer();
+    refreshTopUsername();
+    notifyChatFramesAuthChanged();
+    reloadFriendsFrames();
+  }
 });
 
 // ================================================================
 // CONFIG
 // ================================================================
 const BACKEND = 'https://justmathgames-backend.onrender.com'; // replace with your Render URL
+syncStoredProfileFromServer();
 
 // ================================================================
 // USER ID — persists in localStorage so it survives domain swaps
