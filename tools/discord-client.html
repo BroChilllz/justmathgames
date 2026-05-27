@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cord</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0e0f13;
+    --surface:  #16181f;
+    --panel:    #1c1f28;
+    --border:   #2a2d3a;
+    --accent:   #5b6af7;
+    --accent2:  #9b59f7;
+    --text:     #e8eaf2;
+    --muted:    #7a7d8f;
+    --danger:   #f75b5b;
+    --success:  #5bf7a0;
+    --radius:   12px;
+    --mono:     'DM Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 999;
+  }
+
+  /* ════════════════════════════════════════
+     LOGIN SCREEN
+  ════════════════════════════════════════ */
+  #login-screen {
+    width: 420px;
+    animation: fadeUp .4s ease both;
+  }
+
+  .login-logo {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+  }
+
+  .login-sub {
+    color: var(--muted);
+    font-size: .875rem;
+    margin-bottom: 2rem;
+    font-family: var(--mono);
+  }
+
+  .field {
+    margin-bottom: 1.2rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .5rem;
+    font-family: var(--mono);
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: .85rem 1rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: .925rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    width: 100%;
+    padding: .9rem;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    transition: all .2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+
+  .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .4; cursor: default; transform: none; }
+
+  .error-msg {
+    background: rgba(247,91,91,.12);
+    border: 1px solid rgba(247,91,91,.3);
+    color: var(--danger);
+    border-radius: 8px;
+    padding: .75rem 1rem;
+    font-family: var(--mono);
+    font-size: .82rem;
+    margin-bottom: 1.2rem;
+    display: none;
+  }
+
+  .step-hint {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: .8rem;
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+
+  /* ════════════════════════════════════════
+     APP LAYOUT
+  ════════════════════════════════════════ */
+  #app {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    flex-direction: row;
+    animation: fadeIn .3s ease;
+  }
+
+  /* DM sidebar */
+  #sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 1.2rem 1.2rem .8rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .sidebar-logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .sidebar-section {
+    padding: .8rem 1rem .4rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  #dm-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: .3rem .5rem;
+  }
+
+  #dm-list::-webkit-scrollbar { width: 4px; }
+  #dm-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .dm-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+
+  .dm-item:hover { background: var(--panel); }
+  .dm-item.active { background: rgba(91,106,247,.18); }
+
+  .dm-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--border);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--text);
+  }
+
+  .dm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .dm-info { flex: 1; min-width: 0; }
+
+  .dm-name {
+    font-size: .875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dm-preview {
+    font-size: .75rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--mono);
+    margin-top: 1px;
+  }
+
+  /* User bar */
+  #user-bar {
+    padding: .9rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    background: var(--surface);
+  }
+
+  .user-bar-name {
+    font-size: .875rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logout-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: .75rem;
+    font-family: var(--mono);
+    padding: .3rem .5rem;
+    border-radius: 6px;
+    transition: all .15s;
+  }
+  .logout-btn:hover { color: var(--danger); background: rgba(247,91,91,.1); }
+
+  /* Chat area */
+  #chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #chat-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    background: var(--surface);
+  }
+
+  #chat-header .ch-name {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  #chat-header .ch-status {
+    font-size: .75rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+
+  #messages::-webkit-scrollbar { width: 5px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .msg-group {
+    display: flex;
+    gap: .85rem;
+    margin-top: .9rem;
+  }
+
+  .msg-group-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .82rem;
+    margin-top: 2px;
+  }
+
+  .msg-group-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .msg-group-body { flex: 1; min-width: 0; }
+
+  .msg-meta {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+    margin-bottom: .25rem;
+  }
+
+  .msg-author {
+    font-size: .875rem;
+    font-weight: 700;
+  }
+
+  .msg-time {
+    font-size: .7rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .msg-content {
+    font-size: .9rem;
+    line-height: 1.55;
+    color: #d8dae8;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .msg-continued {
+    padding-left: calc(38px + .85rem);
+  }
+
+  .msg-continued .msg-content {
+    position: relative;
+  }
+
+  .msg-continued .msg-content::before {
+    content: attr(data-time);
+    position: absolute;
+    left: -52px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: .65rem;
+    color: transparent;
+    font-family: var(--mono);
+    width: 38px;
+    text-align: right;
+    transition: color .15s;
+  }
+
+  .msg-continued:hover .msg-content::before {
+    color: var(--muted);
+  }
+
+  /* own messages */
+  .msg-own .msg-author { color: var(--accent); }
+
+  #empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: .75rem;
+    font-family: var(--mono);
+    font-size: .85rem;
+  }
+
+  #empty-state .big { font-size: 3rem; }
+
+  /* Input */
+  #input-area {
+    padding: .9rem 1.5rem 1rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: .75rem;
+    align-items: flex-end;
+  }
+
+  #msg-input {
+    flex: 1;
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem 1rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: .9rem;
+    outline: none;
+    resize: none;
+    max-height: 150px;
+    overflow-y: auto;
+    transition: border-color .2s;
+    line-height: 1.5;
+  }
+
+  #msg-input:focus { border-color: var(--accent); }
+  #msg-input::placeholder { color: var(--muted); }
+
+  #send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .2s;
+  }
+
+  #send-btn:hover { opacity: .85; transform: scale(1.05); }
+  #send-btn:active { transform: scale(.97); }
+  #send-btn:disabled { opacity: .35; cursor: default; transform: none; }
+
+  #send-btn svg { width: 18px; height: 18px; fill: white; }
+
+  /* No DM selected */
+  #no-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: 1rem;
+  }
+
+  .no-chat-icon { font-size: 4rem; }
+  .no-chat-text { font-family: var(--mono); font-size: .85rem; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: inline-block;
+  }
+
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(14,15,19,.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+    display: none;
+  }
+
+  .loading-overlay .spinner { width: 32px; height: 32px; border-width: 3px; }
+  .loading-overlay p { font-family: var(--mono); color: var(--muted); font-size: .85rem; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-group, .msg-continued { animation: msgIn .15s ease both; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: .65rem;
+    font-weight: 500;
+    padding: .1rem .4rem;
+    border-radius: 4px;
+    margin-left: .3rem;
+    vertical-align: middle;
+  }
+
+  .tag-bot { background: rgba(91,106,247,.2); color: var(--accent); }
+
+  /* Group DM */
+  .group-dm-avatar {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    font-size: .7rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Loading overlay ── -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <p id="loading-text">Loading…</p>
+</div>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-logo">Cord</div>
+
+  <!-- Step 1: credentials -->
+  <div id="step-credentials">
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in with your Discord account</div>
+    <div class="error-msg" id="cred-error"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="btn-login">Sign in</button>
+  </div>
+
+  <!-- Step 2a: MFA -->
+  <div id="step-mfa" style="display:none">
+    <div class="login-title">Two-factor auth</div>
+    <p class="step-hint">Enter the 6-digit code from your authenticator app.</p>
+    <div class="error-msg" id="mfa-error"></div>
+    <div class="field">
+      <label>Authenticator code</label>
+      <input type="text" id="input-mfa" placeholder="000000" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
+    </div>
+    <button class="btn btn-primary" id="btn-mfa">Verify</button>
+  </div>
+
+  <!-- Step 2b: Email verification -->
+  <div id="step-email-verify" style="display:none">
+    <div class="login-title">Check your email</div>
+    <p class="step-hint">Discord sent a verification code to your email address. Paste it below.</p>
+    <div class="error-msg" id="ev-error"></div>
+    <div class="field">
+      <label>Email code</label>
+      <input type="text" id="input-ev" placeholder="Paste code here" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="btn-ev">Verify</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">Cord</div>
+    </div>
+    <div class="sidebar-section">Direct Messages</div>
+    <div id="dm-list"></div>
+    <div id="user-bar">
+      <div class="dm-avatar" id="self-avatar"></div>
+      <div class="user-bar-name" id="self-name">–</div>
+      <button class="logout-btn" id="btn-logout">logout</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div id="chat-area">
+    <!-- No DM selected -->
+    <div id="no-chat">
+      <div class="no-chat-icon">💬</div>
+      <div class="no-chat-text">Select a conversation to start chatting</div>
+    </div>
+
+    <!-- Active chat -->
+    <div id="active-chat" style="display:none; flex:1; flex-direction:column; overflow:hidden; display:none;">
+      <div id="chat-header">
+        <div class="dm-avatar" id="ch-avatar"></div>
+        <div>
+          <div class="ch-name" id="ch-name"></div>
+          <div class="ch-status" id="ch-status"></div>
+        </div>
+      </div>
+      <div id="messages"></div>
+      <div id="input-area">
+        <textarea id="msg-input" rows="1" placeholder="Message…"></textarea>
+        <button id="send-btn" title="Send">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const API = 'https://discord.com/api/v10';
+let token = null;
+let mfaTicket = null;
+let selfUser = null;
+let currentChannel = null;
+let pollingInterval = null;
+let lastMessageId = null;
+let dmChannels = [];
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const loading = (show, text = 'Loading…') => {
+  $('loading-overlay').style.display = show ? 'flex' : 'none';
+  $('loading-text').textContent = text;
+};
+const showError = (id, msg) => {
+  const el = $(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+};
+const clearError = id => { $(id).style.display = 'none'; };
+
+function avatarUrl(user, size = 64) {
+  if (!user) return null;
+  if (user.avatar) return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=${size}`;
+  const def = (BigInt(user.id) >> 22n) % 6n;
+  return `https://cdn.discordapp.com/embed/avatars/${def}.png`;
+}
+
+function makeAvatar(el, user, label) {
+  const url = avatarUrl(user);
+  if (url) {
+    el.innerHTML = `<img src="${url}" alt="${label}" onerror="this.parentElement.textContent='${(label||'?')[0].toUpperCase()}'">`;
+  } else {
+    el.textContent = (label || '?')[0].toUpperCase();
+  }
+}
+
+async function discordFetch(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: {
+      'Authorization': token,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
+  });
+  return res;
+}
+
+// ══════════════════════════════════════════
+// LOGIN FLOW
+// ══════════════════════════════════════════
+async function doLogin() {
+  clearError('cred-error');
+  const email = $('input-email').value.trim();
+  const password = $('input-password').value;
+  if (!email || !password) return showError('cred-error', 'Email and password are required.');
+
+  loading(true, 'Signing in…');
+  $('btn-login').disabled = true;
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'https://discord.com',
+        'Referer': 'https://discord.com/login',
+        'X-Super-Properties': btoa(JSON.stringify({
+          os: 'Windows', browser: 'Chrome', device: '',
+          browser_user_agent: navigator.userAgent,
+          browser_version: '120.0.0.0',
+          os_version: '10',
+          referrer: '', referring_domain: '',
+          referrer_current: '', referring_domain_current: '',
+          release_channel: 'stable', client_build_number: 9999,
+          client_event_source: null
+        }))
+      },
+      body: JSON.stringify({ login: email, password })
+    });
+    const data = await res.json();
+    loading(false);
+    $('btn-login').disabled = false;
+
+    if (data.token) return onToken(data.token);
+    if (data.mfa) {
+      mfaTicket = data.ticket;
+      $('step-credentials').style.display = 'none';
+      $('step-mfa').style.display = 'block';
+      return;
+    }
+    if (data.sms || data.email_token !== undefined) {
+      $('step-credentials').style.display = 'none';
+      $('step-email-verify').style.display = 'block';
+      return;
+    }
+    const msg = data.message || (data.errors ? JSON.stringify(data.errors) : 'Login failed.');
+    showError('cred-error', msg);
+  } catch (e) {
+    loading(false);
+    $('btn-login').disabled = false;
+    showError('cred-error', 'Network error. Check your connection.');
+  }
+}
+
+async function doMFA() {
+  clearError('mfa-error');
+  const code = $('input-mfa').value.replace(/\s/g, '');
+  if (!code) return showError('mfa-error', 'Enter your authenticator code.');
+
+  loading(true, 'Verifying…');
+  $('btn-mfa').disabled = true;
+
+  try {
+    const res = await fetch(`${API}/auth/mfa/totp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: mfaTicket, code })
+    });
+    const data = await res.json();
+    loading(false);
+    $('btn-mfa').disabled = false;
+
+    if (data.token) return onToken(data.token);
+    showError('mfa-error', data.message || 'Invalid code.');
+  } catch (e) {
+    loading(false);
+    $('btn-mfa').disabled = false;
+    showError('mfa-error', 'Network error.');
+  }
+}
+
+async function doEmailVerify() {
+  clearError('ev-error');
+  const code = $('input-ev').value.trim();
+  if (!code) return showError('ev-error', 'Paste the code from your email.');
+
+  loading(true, 'Verifying…');
+  $('btn-ev').disabled = true;
+
+  try {
+    const res = await fetch(`${API}/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: code })
+    });
+    const data = await res.json();
+    loading(false);
+    $('btn-ev').disabled = false;
+
+    if (data.token) return onToken(data.token);
+    showError('ev-error', data.message || 'Invalid or expired code.');
+  } catch (e) {
+    loading(false);
+    $('btn-ev').disabled = false;
+    showError('ev-error', 'Network error.');
+  }
+}
+
+// ══════════════════════════════════════════
+// POST-LOGIN
+// ══════════════════════════════════════════
+async function onToken(t) {
+  token = t;
+  loading(true, 'Fetching your account…');
+
+  try {
+    const [meRes, dmsRes] = await Promise.all([
+      discordFetch('/users/@me'),
+      discordFetch('/users/@me/channels')
+    ]);
+    selfUser = await meRes.json();
+    const dms = await dmsRes.json();
+    loading(false);
+
+    if (!selfUser || selfUser.message) {
+      token = null;
+      showError('cred-error', selfUser?.message || 'Failed to fetch user.');
+      $('step-credentials').style.display = 'block';
+      $('step-mfa').style.display = 'none';
+      $('step-email-verify').style.display = 'none';
+      return;
+    }
+
+    dmChannels = Array.isArray(dms) ? dms : [];
+    showApp();
+  } catch (e) {
+    loading(false);
+    alert('Failed to load your account. Please try again.');
+  }
+}
+
+// ══════════════════════════════════════════
+// APP
+// ══════════════════════════════════════════
+function showApp() {
+  $('login-screen').style.display = 'none';
+  const app = $('app');
+  app.style.display = 'flex';
+
+  // Self user bar
+  makeAvatar($('self-avatar'), selfUser, selfUser.username);
+  $('self-name').textContent = selfUser.global_name || selfUser.username;
+
+  renderDMList();
+}
+
+function renderDMList() {
+  const list = $('dm-list');
+  list.innerHTML = '';
+
+  // Sort by last_message_id desc (newer first)
+  const sorted = [...dmChannels].sort((a, b) => {
+    const ai = BigInt(a.last_message_id || '0');
+    const bi = BigInt(b.last_message_id || '0');
+    return bi > ai ? 1 : bi < ai ? -1 : 0;
+  });
+
+  sorted.forEach(ch => {
+    const item = document.createElement('div');
+    item.className = 'dm-item';
+    item.dataset.id = ch.id;
+
+    const isGroup = ch.type === 3;
+    const label = isGroup
+      ? (ch.name || ch.recipients.map(r => r.username).join(', '))
+      : (ch.recipients?.[0]?.global_name || ch.recipients?.[0]?.username || 'Unknown');
+
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'dm-avatar' + (isGroup ? ' group-dm-avatar' : '');
+
+    if (isGroup) {
+      avatarDiv.textContent = (ch.name || '#')[0].toUpperCase();
+    } else {
+      makeAvatar(avatarDiv, ch.recipients?.[0], label);
+    }
+
+    item.innerHTML = `
+      <div class="dm-info">
+        <div class="dm-name">${escHtml(label)}${ch.recipients?.[0]?.bot ? '<span class="tag tag-bot">BOT</span>' : ''}</div>
+        <div class="dm-preview">${isGroup ? `${ch.recipients?.length || 0} members` : `@${escHtml(ch.recipients?.[0]?.username || '')}`}</div>
+      </div>
+    `;
+    item.prepend(avatarDiv);
+
+    item.addEventListener('click', () => openChannel(ch));
+    list.appendChild(item);
+  });
+}
+
+async function openChannel(ch) {
+  // highlight
+  document.querySelectorAll('.dm-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.dm-item[data-id="${ch.id}"]`)?.classList.add('active');
+
+  currentChannel = ch;
+  lastMessageId = null;
+
+  const isGroup = ch.type === 3;
+  const label = isGroup
+    ? (ch.name || ch.recipients.map(r => r.username).join(', '))
+    : (ch.recipients?.[0]?.global_name || ch.recipients?.[0]?.username || 'Unknown');
+
+  // Header
+  const chAv = $('ch-avatar');
+  chAv.className = 'dm-avatar' + (isGroup ? ' group-dm-avatar' : '');
+  if (isGroup) {
+    chAv.textContent = (ch.name || '#')[0].toUpperCase();
+  } else {
+    makeAvatar(chAv, ch.recipients?.[0], label);
+  }
+  $('ch-name').textContent = label;
+  $('ch-status').textContent = isGroup
+    ? `${ch.recipients.length} participants`
+    : `@${ch.recipients?.[0]?.username || ''}`;
+
+  $('no-chat').style.display = 'none';
+  const ac = $('active-chat');
+  ac.style.display = 'flex';
+
+  $('messages').innerHTML = '<div id="empty-state"><div class="big">⏳</div><div>Loading messages…</div></div>';
+
+  if (pollingInterval) clearInterval(pollingInterval);
+
+  await loadMessages();
+  pollingInterval = setInterval(pollNewMessages, 2500);
+}
+
+async function loadMessages() {
+  try {
+    const res = await discordFetch(`/channels/${currentChannel.id}/messages?limit=50`);
+    if (!res.ok) { $('messages').innerHTML = '<div id="empty-state"><div class="big">⚠️</div><div>Could not load messages.</div></div>'; return; }
+    const msgs = await res.json();
+    if (!Array.isArray(msgs) || msgs.length === 0) {
+      $('messages').innerHTML = '<div id="empty-state"><div class="big">🌌</div><div>No messages yet</div></div>';
+      return;
+    }
+    const reversed = msgs.reverse();
+    lastMessageId = reversed[reversed.length - 1].id;
+    $('messages').innerHTML = '';
+    renderMessages(reversed, true);
+    scrollToBottom();
+  } catch (e) {
+    $('messages').innerHTML = '<div id="empty-state"><div class="big">⚠️</div><div>Error loading messages.</div></div>';
+  }
+}
+
+async function pollNewMessages() {
+  if (!currentChannel || !lastMessageId) return;
+  try {
+    const res = await discordFetch(`/channels/${currentChannel.id}/messages?after=${lastMessageId}&limit=50`);
+    if (!res.ok) return;
+    const msgs = await res.json();
+    if (!Array.isArray(msgs) || msgs.length === 0) return;
+    const sorted = msgs.sort((a, b) => (BigInt(a.id) > BigInt(b.id) ? 1 : -1));
+    lastMessageId = sorted[sorted.length - 1].id;
+    const wasAtBottom = isAtBottom();
+    renderMessages(sorted, false);
+    if (wasAtBottom) scrollToBottom();
+  } catch {}
+}
+
+// ══════════════════════════════════════════
+// MESSAGE RENDERING
+// ══════════════════════════════════════════
+function renderMessages(msgs, initial) {
+  const container = $('messages');
+  let prevAuthorId = initial ? null : container.dataset.lastAuthor;
+  let prevTimestamp = initial ? null : (container.dataset.lastTs ? Number(container.dataset.lastTs) : null);
+
+  msgs.forEach(msg => {
+    const ts = new Date(msg.timestamp);
+    const tsMs = ts.getTime();
+    const isSelf = msg.author.id === selfUser.id;
+    const sameAuthor = prevAuthorId === msg.author.id;
+    const closeInTime = prevTimestamp && (tsMs - prevTimestamp) < 5 * 60 * 1000;
+    const continued = sameAuthor && closeInTime;
+
+    if (continued) {
+      const el = document.createElement('div');
+      el.className = 'msg-continued' + (isSelf ? ' msg-own' : '');
+      el.innerHTML = `<div class="msg-content" data-time="${formatTime(ts)}">${formatContent(msg.content, msg.attachments)}</div>`;
+      container.appendChild(el);
+    } else {
+      const authorName = msg.author.global_name || msg.author.username;
+      const group = document.createElement('div');
+      group.className = 'msg-group' + (isSelf ? ' msg-own' : '');
+
+      const av = document.createElement('div');
+      av.className = 'msg-group-avatar';
+      makeAvatar(av, msg.author, authorName);
+
+      group.innerHTML = `
+        <div class="msg-group-body">
+          <div class="msg-meta">
+            <span class="msg-author">${escHtml(authorName)}${msg.author.bot ? '<span class="tag tag-bot">BOT</span>' : ''}</span>
+            <span class="msg-time">${formatTime(ts)}</span>
+          </div>
+          <div class="msg-content">${formatContent(msg.content, msg.attachments)}</div>
+        </div>
+      `;
+      group.prepend(av);
+      container.appendChild(group);
+    }
+
+    prevAuthorId = msg.author.id;
+    prevTimestamp = tsMs;
+  });
+
+  container.dataset.lastAuthor = prevAuthorId || '';
+  container.dataset.lastTs = prevTimestamp || '';
+}
+
+function formatContent(content, attachments) {
+  let out = escHtml(content || '');
+  // bold, italic, code
+  out = out
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:var(--panel);padding:.1em .3em;border-radius:4px;font-family:var(--mono);font-size:.85em">$1</code>')
+    .replace(/\n/g, '<br>');
+  // Attachments
+  if (attachments && attachments.length) {
+    attachments.forEach(a => {
+      if (a.content_type?.startsWith('image/')) {
+        out += `<br><img src="${a.url}" style="max-width:320px;max-height:240px;border-radius:8px;margin-top:.4rem;display:block" alt="${escHtml(a.filename)}">`;
+      } else {
+        out += `<br><a href="${a.url}" target="_blank" style="color:var(--accent);font-family:var(--mono);font-size:.8rem">📎 ${escHtml(a.filename)}</a>`;
+      }
+    });
+  }
+  return out || '<span style="color:var(--muted);font-style:italic">[empty message]</span>';
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isAtBottom() {
+  const el = $('messages');
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+}
+
+function scrollToBottom() {
+  const el = $('messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ══════════════════════════════════════════
+// SEND MESSAGE
+// ══════════════════════════════════════════
+async function sendMessage() {
+  if (!currentChannel) return;
+  const input = $('msg-input');
+  const content = input.value.trim();
+  if (!content) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  $('send-btn').disabled = true;
+
+  try {
+    await discordFetch(`/channels/${currentChannel.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
+  } catch {}
+
+  $('send-btn').disabled = false;
+  input.focus();
+}
+
+// ══════════════════════════════════════════
+// LOGOUT
+// ══════════════════════════════════════════
+function logout() {
+  token = null; selfUser = null; currentChannel = null;
+  mfaTicket = null; dmChannels = [];
+  if (pollingInterval) clearInterval(pollingInterval);
+
+  $('app').style.display = 'none';
+  $('login-screen').style.display = 'block';
+  $('step-credentials').style.display = 'block';
+  $('step-mfa').style.display = 'none';
+  $('step-email-verify').style.display = 'none';
+  $('input-email').value = '';
+  $('input-password').value = '';
+  clearError('cred-error');
+}
+
+// ══════════════════════════════════════════
+// EVENT LISTENERS
+// ══════════════════════════════════════════
+$('btn-login').addEventListener('click', doLogin);
+$('btn-mfa').addEventListener('click', doMFA);
+$('btn-ev').addEventListener('click', doEmailVerify);
+$('btn-logout').addEventListener('click', logout);
+$('send-btn').addEventListener('click', sendMessage);
+
+// Enter to send (shift+enter for newline)
+$('msg-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Auto-resize textarea
+$('msg-input').addEventListener('input', function () {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+// Enter on login fields
+['input-email','input-password'].forEach(id => {
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+});
+$('input-mfa').addEventListener('keydown', e => { if (e.key === 'Enter') doMFA(); });
+$('input-ev').addEventListener('keydown', e => { if (e.key === 'Enter') doEmailVerify(); });
+</script>
+</body>
+</html>
