@@ -655,12 +655,18 @@ body {
   position: fixed;
   top: calc(var(--topbar-height) + 12px);
   right: 14px;
-  z-index: 13000;
+  z-index: 2147483647;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: min(320px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: hidden;
   pointer-events: none;
+}
+
+body.has-active-overlay .toast-stack {
+  top: 14px;
 }
 
 .jmg-toast {
@@ -1544,6 +1550,7 @@ const socialModal = document.getElementById("socialModal");
 const socialModalFrame = document.getElementById("socialModalFrame");
 const createGroupModal = document.getElementById("createGroupModal");
 const toastStack = document.getElementById("jmgToastStack");
+const activeToasts = new Map();
 const profileSettingsModal = document.getElementById("profileSettingsModal");
 const publicProfileModal = document.getElementById("publicProfileModal");
 const contentDetailsModal = document.getElementById("contentDetailsModal");
@@ -2213,6 +2220,7 @@ cards.forEach(card => {
 
 /* OPEN GAME */
 function openGame(url) {
+  document.body.classList.add("has-active-overlay");
   overlay.classList.add("game-mode");
   frame.style.display = "block";
   showPlayer.style.display = "none";
@@ -2240,6 +2248,7 @@ function populateEpisodes(season) {
 }
   
 function openShow(seasons, id, player) {
+  document.body.classList.add("has-active-overlay");
   overlay.classList.remove("game-mode");
   frame.style.display = "none";
   showPlayer.style.display = "block";
@@ -2284,6 +2293,7 @@ function changeSeason() {
 
 /* CLOSE */
 function closeGame() {
+  document.body.classList.remove("has-active-overlay");
   overlay.style.display = "none";
   overlay.classList.remove("game-mode");
 
@@ -2303,6 +2313,7 @@ function openSidebarTool(type, href) {
     return;
   }
 
+  document.body.classList.add("has-active-overlay");
   overlay.style.display = "flex";
   overlay.classList.add("game-mode");
   frame.style.display = "block";
@@ -2392,8 +2403,48 @@ async function createGroupFromHomepage() {
   }
 }
 
-function showToast(title, body = "", ttl = 4200) {
+function scheduleToastRemoval(toast, key, ttl) {
+  const entry = key ? activeToasts.get(key) : null;
+  if (entry) {
+    clearTimeout(entry.hideTimer);
+    clearTimeout(entry.removeTimer);
+  }
+
+  const hideTimer = setTimeout(() => {
+    toast.classList.remove("is-visible");
+    const removeTimer = setTimeout(() => {
+      toast.remove();
+      if (key) activeToasts.delete(key);
+    }, 220);
+    if (entry) entry.removeTimer = removeTimer;
+  }, ttl);
+
+  if (entry) entry.hideTimer = hideTimer;
+  return hideTimer;
+}
+
+function showToast(title, body = "", ttl = 4200, key = "") {
   if (!toastStack) return;
+  const toastKey = String(key || "");
+  if (toastKey && activeToasts.has(toastKey)) {
+    const entry = activeToasts.get(toastKey);
+    entry.toast.querySelector(".jmg-toast-title").textContent = title;
+    let bodyEl = entry.toast.querySelector(".jmg-toast-body");
+    if (body) {
+      if (!bodyEl) {
+        bodyEl = document.createElement("div");
+        bodyEl.className = "jmg-toast-body";
+        entry.toast.appendChild(bodyEl);
+      }
+      bodyEl.textContent = body;
+    } else if (bodyEl) {
+      bodyEl.remove();
+    }
+    entry.toast.classList.add("is-visible");
+    scheduleToastRemoval(entry.toast, toastKey, ttl);
+    return;
+  }
+
   const toast = document.createElement("div");
   toast.className = "jmg-toast";
   toast.innerHTML = `
@@ -2401,11 +2452,9 @@ function showToast(title, body = "", ttl = 4200) {
     ${body ? `<div class="jmg-toast-body">${escapeHtml(body)}</div>` : ""}
   `;
   toastStack.appendChild(toast);
+  if (toastKey) activeToasts.set(toastKey, { toast, hideTimer: null, removeTimer: null });
   requestAnimationFrame(() => toast.classList.add("is-visible"));
-  setTimeout(() => {
-    toast.classList.remove("is-visible");
-    setTimeout(() => toast.remove(), 220);
-  }, ttl);
+  scheduleToastRemoval(toast, toastKey, ttl);
 }
 
 function escapeHtml(value) {
@@ -2523,6 +2572,10 @@ function getUserId() {
 // ================================================================
 let currentPresenceActivity = "";
 let notificationState = null;
+let notificationPollTimer = null;
+let notificationPollInFlight = false;
+const notifiedMessageIds = new Set();
+const MAX_NOTIFIED_MESSAGE_IDS = 500;
 
 function authHeaders() {
   const token = localStorage.getItem("jmg_token");
@@ -2589,15 +2642,34 @@ function latestMessage(messages) {
   return Array.isArray(messages) && messages.length ? messages[messages.length - 1] : null;
 }
 
-async function pollNotifications() {
-  const headers = authHeaders();
-  const me = localStorage.getItem("jmg_username");
-  if (!headers || !me) {
-    notificationState = null;
-    return;
+function rememberNotifiedMessage(id) {
+  const key = String(id || "");
+  if (!key) return false;
+  const alreadySeen = notifiedMessageIds.has(key);
+  notifiedMessageIds.add(key);
+  while (notifiedMessageIds.size > MAX_NOTIFIED_MESSAGE_IDS) {
+    notifiedMessageIds.delete(notifiedMessageIds.values().next().value);
   }
+  return alreadySeen;
+}
+
+async function pollNotifications() {
+  if (notificationPollInFlight) return;
+  notificationPollInFlight = true;
 
   try {
+    const headers = authHeaders();
+    const me = localStorage.getItem("jmg_username");
+    if (!headers || !me) {
+      notificationState = null;
+      notifiedMessageIds.clear();
+      return;
+    }
+    if (notificationState?.user && notificationState.user !== me) {
+      notificationState = null;
+      notifiedMessageIds.clear();
+    }
+
     const [friendData, groups, globalMessages] = await Promise.all([
       fetchJson(`${BACKEND}/friends`, { headers }),
       fetchJson(`${BACKEND}/groups`, { headers }),
@@ -2608,24 +2680,25 @@ async function pollNotifications() {
     const friends = friendData.friends || [];
     const incoming = friendData.incoming || [];
     const outgoing = friendData.outgoing || [];
+    const stateWasReady = Boolean(notificationState?.ready && notificationState.user === me);
     const nextState = {
       ready: true,
+      user: me,
       friends: setFrom(friends),
       incoming: setFrom(incoming),
       outgoing: setFrom(outgoing),
-      messages: new Map(notificationState?.messages || [])
+      messages: new Map(stateWasReady ? notificationState.messages : [])
     };
 
-    const stateWasReady = Boolean(notificationState?.ready);
     if (stateWasReady) {
       for (const username of nextState.incoming) {
         if (!notificationState.incoming.has(username)) {
-          showToast("Friend request", `${username} sent you a request`);
+          showToast("Friend request", `${username} sent you a request`, 4200, `friend-request:${username}`);
         }
       }
       for (const username of nextState.friends) {
         if (!notificationState.friends.has(username) && notificationState.outgoing.has(username)) {
-          showToast("Friend accepted", `${username} accepted your request`);
+          showToast("Friend accepted", `${username} accepted your request`, 4200, `friend-accepted:${username}`);
         }
       }
       if (
@@ -2672,19 +2745,30 @@ async function pollNotifications() {
       if (!message?._id) continue;
       const sender = message.username || message.from || "";
       const previousId = nextState.messages.get(item.key);
-      if (stateWasReady && previousId && previousId !== message._id && sender !== me) {
-        showToast(item.label, `${sender}: ${truncateNotificationText(message.text)}`);
+      const notificationId = `${item.key}:${message._id}`;
+      const alreadyNotified = rememberNotifiedMessage(notificationId);
+      if (stateWasReady && previousId && previousId !== message._id && sender !== me && !alreadyNotified) {
+        showToast(
+          item.label,
+          `${sender}: ${truncateNotificationText(message.text)}`,
+          4200,
+          `message:${notificationId}`
+        );
       }
       nextState.messages.set(item.key, message._id);
     }
 
     notificationState = nextState;
-  } catch {}
+  } catch {
+  } finally {
+    notificationPollInFlight = false;
+  }
 }
 
 function startNotificationPolling() {
+  if (notificationPollTimer) return;
   pollNotifications();
-  setInterval(pollNotifications, 1000);
+  notificationPollTimer = setInterval(pollNotifications, 1000);
 }
 
 // ================================================================
