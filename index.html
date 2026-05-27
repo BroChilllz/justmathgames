@@ -1564,6 +1564,16 @@ const contentDislikeButton = document.getElementById("contentDislikeButton");
 const contentLikeCount = document.getElementById("contentLikeCount");
 const contentDislikeCount = document.getElementById("contentDislikeCount");
 
+function setOverlayToastMode(active) {
+  document.body.classList.toggle("has-active-overlay", active);
+  if (!toastStack) return;
+
+  const target = active ? overlay : document.body;
+  if (toastStack.parentNode !== target) {
+    target.appendChild(toastStack);
+  }
+}
+
 document.querySelectorAll('.card[data-rating]').forEach(card => {
   const badge = document.createElement('span');
   badge.className = 'rating-badge';
@@ -2220,7 +2230,7 @@ cards.forEach(card => {
 
 /* OPEN GAME */
 function openGame(url) {
-  document.body.classList.add("has-active-overlay");
+  setOverlayToastMode(true);
   overlay.classList.add("game-mode");
   frame.style.display = "block";
   showPlayer.style.display = "none";
@@ -2248,7 +2258,7 @@ function populateEpisodes(season) {
 }
   
 function openShow(seasons, id, player) {
-  document.body.classList.add("has-active-overlay");
+  setOverlayToastMode(true);
   overlay.classList.remove("game-mode");
   frame.style.display = "none";
   showPlayer.style.display = "block";
@@ -2293,7 +2303,7 @@ function changeSeason() {
 
 /* CLOSE */
 function closeGame() {
-  document.body.classList.remove("has-active-overlay");
+  setOverlayToastMode(false);
   overlay.style.display = "none";
   overlay.classList.remove("game-mode");
 
@@ -2313,7 +2323,7 @@ function openSidebarTool(type, href) {
     return;
   }
 
-  document.body.classList.add("has-active-overlay");
+  setOverlayToastMode(true);
   overlay.style.display = "flex";
   overlay.classList.add("game-mode");
   frame.style.display = "block";
