@@ -720,7 +720,7 @@ async function doLogin() {
 
   loading(true, 'Signing in…');
   $('btn-login').disabled = true;
-
+  console.log("Sending");
   try {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
