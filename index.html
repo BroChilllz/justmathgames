@@ -2923,53 +2923,53 @@ async function scrapeAllSaves() {
 // BACKUP
 // ================================================================
 async function backupSavesToBackend() {
-  const { localSaves, idbSaves } = await scrapeAllSaves();
-  const totalKeys = Object.keys(localSaves).length + Object.keys(idbSaves).length;
-  if (totalKeys === 0) return;
-  try {
-    await fetch(`${BACKEND}/user/${getUserId()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameSaves: localSaves, idbSaves })
-    });
-    localStorage.setItem('jmg_lastBackup', new Date().toISOString());
-    console.log(`Backed up: ${Object.keys(localSaves).length} localStorage keys, ${Object.keys(idbSaves).length} IDB databases`);
-  } catch {
-    console.warn('Backup failed');
-  }
+  // const { localSaves, idbSaves } = await scrapeAllSaves();
+  // const totalKeys = Object.keys(localSaves).length + Object.keys(idbSaves).length;
+  // if (totalKeys === 0) return;
+  // try {
+  //   await fetch(`${BACKEND}/user/${getUserId()}`, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({ gameSaves: localSaves, idbSaves })
+  //   });
+  //   localStorage.setItem('jmg_lastBackup', new Date().toISOString());
+  //   console.log(`Backed up: ${Object.keys(localSaves).length} localStorage keys, ${Object.keys(idbSaves).length} IDB databases`);
+  // } catch {
+  //   console.warn('Backup failed');
+  // }
 }
 
 // ================================================================
 // RESTORE
 // ================================================================
 async function restoreSavesFromBackend() {
-  try {
-    const res = await fetch(`${BACKEND}/user/${getUserId()}`);
-    const data = await res.json();
+  // try {
+  //   const res = await fetch(`${BACKEND}/user/${getUserId()}`);
+  //   const data = await res.json();
 
-    // Restore localStorage
-    const localSaves = data.gameSaves || {};
-    let restoredLocal = 0;
-    for (const [key, value] of Object.entries(localSaves)) {
-      if (!localStorage.getItem(key)) {
-        localStorage.setItem(key, value);
-        restoredLocal++;
-      }
-    }
+  //   // Restore localStorage
+  //   const localSaves = data.gameSaves || {};
+  //   let restoredLocal = 0;
+  //   for (const [key, value] of Object.entries(localSaves)) {
+  //     if (!localStorage.getItem(key)) {
+  //       localStorage.setItem(key, value);
+  //       restoredLocal++;
+  //     }
+  //   }
 
-    // Restore IndexedDB
-    const idbSaves = data.idbSaves || {};
-    await restoreIndexedDB(idbSaves);
-    const restoredIDB = Object.keys(idbSaves).length;
+  //   // Restore IndexedDB
+  //   const idbSaves = data.idbSaves || {};
+  //   await restoreIndexedDB(idbSaves);
+  //   const restoredIDB = Object.keys(idbSaves).length;
 
-    if (restoredLocal || restoredIDB) {
-      console.log(`Restored ${restoredLocal} localStorage keys, ${restoredIDB} IDB databases`);
-    }
+  //   if (restoredLocal || restoredIDB) {
+  //     console.log(`Restored ${restoredLocal} localStorage keys, ${restoredIDB} IDB databases`);
+  //   }
 
-    return data;
-  } catch {
-    return { favorites: [], settings: {}, gameSaves: {}, idbSaves: {} };
-  }
+  //   return data;
+  // } catch {
+  //   return { favorites: [], settings: {}, gameSaves: {}, idbSaves: {} };
+  // }
 }
 
 // ================================================================
