@@ -153,6 +153,13 @@
         }
       });
 
+      // Announce call so others get notified
+      await fetch(`${BACKEND}/vc/call`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ room })
+      }).catch(() => {});
+      
       await livekitRoom.connect(data.url, data.token);
 
       // Add existing participants
@@ -208,6 +215,12 @@
 
   // Leave
   document.getElementById('btn-leave').onclick = async function() {
+    // Cancel the call announcement
+    await fetch(`${BACKEND}/vc/call/${encodeURIComponent(room)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch(() => {});
+  
     if (livekitRoom) await livekitRoom.disconnect();
     window.parent?.postMessage({ source: 'jmg-widget', action: 'vcLeft' }, '*');
     window.close();
