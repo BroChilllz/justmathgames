@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Voice Chat</title>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #121215; color: #f2f4f5; }
+  #vc-root { display: flex; flex-direction: column; height: 100vh; padding: 16px; gap: 12px; }
+  #vc-header { font-size: 13px; color: #b8b8b8; }
+  #vc-participants { display: flex; flex-wrap: wrap; gap: 10px; flex: 1; align-content: flex-start; }
+  .vc-participant {
+    background: #191b1f; border: 1px solid #34373d; border-radius: 10px;
+    padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+    font-size: 13px; min-width: 140px;
+  }
+  .vc-participant.speaking { border-color: #22d3a5; }
+  .vc-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: #232527;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .vc-name { font-weight: 600; }
+  .vc-muted { font-size: 11px; color: #b8b8b8; margin-top: 2px; }
+  #vc-controls { display: flex; gap: 8px; }
+  .vc-btn {
+    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #34373d;
+    background: #191b1f; color: #f2f4f5; font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.15s;
+  }
+  .vc-btn:hover { border-color: #5f626a; }
+  .vc-btn.active { background: #22d3a5; border-color: #22d3a5; color: #121215; }
+  .vc-btn.danger { border-color: #f85a5a; color: #f85a5a; }
+  .vc-btn.danger:hover { background: #f85a5a; color: #fff; }
+  #vc-screen { width: 100%; border-radius: 8px; background: #000; display: none; max-height: 300px; }
+  #vc-status { font-size: 12px; color: #b8b8b8; text-align: center; padding: 8px; }
+</style>
+</head>
+<body>
+<div id="vc-root">
+  <div id="vc-header">Connecting...</div>
+  <video id="vc-screen" autoplay muted playsinline></video>
+  <div id="vc-participants"></div>
+  <div id="vc-status"></div>
+  <div id="vc-controls">
+    <button class="vc-btn" id="btn-mute">🎤 Mute</button>
+    <button class="vc-btn" id="btn-screen">🖥 Share Screen</button>
+    <button class="vc-btn danger" id="btn-leave">Leave</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const BACKEND = 'https://justmathgames-backend.onrender.com';
+  const params  = new URLSearchParams(window.location.search);
+  const room    = params.get('room');
+  const token   = localStorage.getItem('jmg_token');
+  const me      = localStorage.getItem('jmg_username');
+
+  const { Room, RoomEvent, Track, createLocalTracks } = LivekitClient;
+
+  let livekitRoom = null;
+  let micTrack    = null;
+  let screenTrack = null;
+  let muted       = false;
+
+  const participants = new Map(); // identity -> { muted, speaking }
+
+  function setStatus(msg) {
+    document.getElementById('vc-status').textContent = msg;
+  }
+
+  function renderParticipants() {
+    const container = document.getElementById('vc-participants');
+    if (!participants.size) {
+      container.innerHTML = '<div style="color:#b8b8b8;font-size:13px">Just you so far...</div>';
+      return;
+    }
+    container.innerHTML = [...participants.entries()].map(([name, state]) => `
+      <div class="vc-participant ${state.speaking ? 'speaking' : ''}">
+        <div class="vc-avatar">${name[0].toUpperCase()}</div>
+        <div>
+          <div class="vc-name">${name}${name === me ? ' (you)' : ''}</div>
+          <div class="vc-muted">${state.muted ? '🔇 Muted' : '🎤 Speaking'}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function join() {
+    if (!room || !token) {
+      setStatus('Missing room or not logged in.');
+      return;
+    }
+
+    document.getElementById('vc-header').textContent = `Room: ${room}`;
+    setStatus('Getting token...');
+
+    try {
+      const res  = await fetch(`${BACKEND}/vc/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ room })
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus(data.error || 'Failed to get token'); return; }
+
+      setStatus('Connecting...');
+      livekitRoom = new Room();
+
+      // Participant events
+      livekitRoom.on(RoomEvent.ParticipantConnected, p => {
+        participants.set(p.identity, { muted: true, speaking: false });
+        renderParticipants();
+      });
+      livekitRoom.on(RoomEvent.ParticipantDisconnected, p => {
+        participants.delete(p.identity);
+        renderParticipants();
+      });
+      livekitRoom.on(RoomEvent.ActiveSpeakersChanged, speakers => {
+        for (const [name, state] of participants) state.speaking = false;
+        for (const speaker of speakers) {
+          if (participants.has(speaker.identity))
+            participants.get(speaker.identity).speaking = true;
+        }
+        renderParticipants();
+      });
+      livekitRoom.on(RoomEvent.TrackMuted, (pub, p) => {
+        if (pub.kind === Track.Kind.Audio && participants.has(p.identity))
+          participants.get(p.identity).muted = true;
+        renderParticipants();
+      });
+      livekitRoom.on(RoomEvent.TrackUnmuted, (pub, p) => {
+        if (pub.kind === Track.Kind.Audio && participants.has(p.identity))
+          participants.get(p.identity).muted = false;
+        renderParticipants();
+      });
+
+      // Screenshare from remote
+      livekitRoom.on(RoomEvent.TrackSubscribed, (track, pub, p) => {
+        if (track.kind === Track.Kind.Video) {
+          const el = document.getElementById('vc-screen');
+          track.attach(el);
+          el.style.display = 'block';
+        }
+      });
+      livekitRoom.on(RoomEvent.TrackUnsubscribed, (track) => {
+        if (track.kind === Track.Kind.Video) {
+          const el = document.getElementById('vc-screen');
+          track.detach(el);
+          el.style.display = 'none';
+        }
+      });
+
+      await livekitRoom.connect(data.url, data.token);
+
+      // Add existing participants
+      for (const p of livekitRoom.remoteParticipants.values()) {
+        participants.set(p.identity, { muted: true, speaking: false });
+      }
+      participants.set(me, { muted: false, speaking: false });
+      renderParticipants();
+
+      // Publish mic
+      const tracks = await createLocalTracks({ audio: true, video: false });
+      for (const track of tracks) {
+        await livekitRoom.localParticipant.publishTrack(track);
+        if (track.kind === Track.Kind.Audio) micTrack = track;
+      }
+
+      setStatus('');
+    } catch (err) {
+      setStatus('Connection failed: ' + err.message);
+    }
+  }
+
+  // Mute toggle
+  document.getElementById('btn-mute').onclick = async function() {
+    if (!micTrack) return;
+    muted = !muted;
+    muted ? await micTrack.mute() : await micTrack.unmute();
+    this.textContent = muted ? '🔇 Unmute' : '🎤 Mute';
+    this.classList.toggle('active', muted);
+    if (participants.has(me)) participants.get(me).muted = muted;
+    renderParticipants();
+  };
+
+  // Screenshare toggle
+  document.getElementById('btn-screen').onclick = async function() {
+    if (screenTrack) {
+      await livekitRoom.localParticipant.unpublishTrack(screenTrack);
+      screenTrack.stop();
+      screenTrack = null;
+      this.textContent = '🖥 Share Screen';
+      this.classList.remove('active');
+    } else {
+      try {
+        screenTrack = await LivekitClient.createLocalScreenTracks({ audio: true });
+        const videoTrack = Array.isArray(screenTrack) ? screenTrack[0] : screenTrack;
+        await livekitRoom.localParticipant.publishTrack(videoTrack);
+        screenTrack = videoTrack;
+        this.textContent = '🖥 Stop Sharing';
+        this.classList.add('active');
+      } catch { setStatus('Screen share cancelled or denied.'); }
+    }
+  };
+
+  // Leave
+  document.getElementById('btn-leave').onclick = async function() {
+    if (livekitRoom) await livekitRoom.disconnect();
+    window.parent?.postMessage({ source: 'jmg-widget', action: 'vcLeft' }, '*');
+    window.close();
+  };
+
+  join();
+})();
+</script>
+</body>
+</html>
