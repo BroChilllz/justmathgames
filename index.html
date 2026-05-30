@@ -1536,6 +1536,37 @@ body.has-active-overlay .toast-stack {
   </div>
 </div>
 
+<!-- PERSISTENT VC BAR -->
+<div id="vcBar" style="display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  z-index:9998; background:#191b1f; border:1px solid #34373d; border-top:2px solid #22d3a5;
+  border-radius:12px 12px 0 0; padding:10px 20px; display:none; align-items:center; gap:16px;
+  box-shadow:0 -4px 24px rgba(0,0,0,0.5); min-width:320px; max-width:520px;">
+  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+    <div id="vcBarLabel" style="font-size:12px;font-weight:700;color:#f2f4f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Voice Call</div>
+    <div id="vcBarTimer" style="font-size:11px;color:#22d3a5">Connecting...</div>
+  </div>
+  <button id="vcBarMute" onclick="vcBarToggleMute()" title="Mute" style="width:34px;height:34px;border-radius:50%;
+    border:1px solid #34373d;background:#232527;color:#f2f4f5;font-size:15px;cursor:pointer;transition:all 0.15s">🎤</button>
+  <button id="vcBarScreen" onclick="vcBarToggleScreen()" title="Share Screen" style="width:34px;height:34px;border-radius:50%;
+    border:1px solid #34373d;background:#232527;color:#f2f4f5;font-size:15px;cursor:pointer;transition:all 0.15s">🖥</button>
+  <button onclick="vcBarExpand()" title="Open call" style="width:34px;height:34px;border-radius:50%;
+    border:1px solid #34373d;background:#232527;color:#f2f4f5;font-size:15px;cursor:pointer;transition:all 0.15s">⬆</button>
+  <button onclick="vcBarLeave()" title="Leave call" style="width:34px;height:34px;border-radius:50%;
+    border:none;background:#f85a5a;color:#fff;font-size:15px;cursor:pointer;transition:opacity 0.15s">📵</button>
+</div>
+
+<!-- HIDDEN VC IFRAME — stays loaded in background -->
+<iframe id="vcFrame" src="" style="display:none" allow="microphone; camera; display-capture"></iframe>
+
+<!-- VC PANEL — slides up over everything including games -->
+<div id="vcPanel" style="display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  z-index:9997; width:min(420px, 100vw); height:480px; background:#121215;
+  border:1px solid #34373d; border-radius:12px 12px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,0.6); overflow:hidden;">
+  <iframe id="vcPanelFrame" src="" style="width:100%;height:100%;border:none"
+    allow="microphone; camera; display-capture"></iframe>
+</div>
+
 <!-- SCRIPT -->
 <script>
 const search = document.querySelector(".search");
@@ -2725,6 +2756,97 @@ window.answerCall = function() {
 window.declineCall = function() {
   hideIncomingCall();
 };
+
+let vcBarRoom = null;
+let vcBarCallStart = null;
+let vcBarTimerInterval = null;
+let vcBarMuted = false;
+let vcBarScreenSharing = false;
+
+function openVcBar(room, label) {
+  vcBarRoom = room;
+  vcBarCallStart = Date.now();
+  vcBarMuted = false;
+  vcBarScreenSharing = false;
+
+  document.getElementById('vcBarLabel').textContent = label || room;
+  document.getElementById('vcBarTimer').textContent = 'Connecting...';
+  document.getElementById('vcBarMute').textContent = '🎤';
+  document.getElementById('vcBarScreen').textContent = '🖥';
+  document.getElementById('vcBar').style.display = 'flex';
+
+  // Load VC in hidden background iframe
+  const token = localStorage.getItem('jmg_token');
+  document.getElementById('vcFrame').src =
+    `tools/widget-vc.html?room=${encodeURIComponent(room)}&embedded=1&token=${encodeURIComponent(token || '')}`;
+
+  // Start call timer
+  clearInterval(vcBarTimerInterval);
+  vcBarTimerInterval = setInterval(() => {
+    const secs = Math.floor((Date.now() - vcBarCallStart) / 1000);
+    const m = String(Math.floor(secs / 60)).padStart(2, '0');
+    const s = String(secs % 60).padStart(2, '0');
+    document.getElementById('vcBarTimer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function closeVcBar() {
+  vcBarRoom = null;
+  clearInterval(vcBarTimerInterval);
+  document.getElementById('vcBar').style.display = 'none';
+  document.getElementById('vcPanel').style.display = 'none';
+  document.getElementById('vcFrame').src = '';
+  document.getElementById('vcPanelFrame').src = '';
+}
+
+function vcBarToggleMute() {
+  vcBarMuted = !vcBarMuted;
+  document.getElementById('vcBarMute').textContent = vcBarMuted ? '🔇' : '🎤';
+  document.getElementById('vcBarMute').style.background = vcBarMuted ? '#f85a5a' : '#232527';
+  // Tell the vc iframe to mute/unmute
+  document.getElementById('vcFrame').contentWindow?.postMessage(
+    { action: vcBarMuted ? 'mute' : 'unmute' }, '*'
+  );
+}
+
+function vcBarToggleScreen() {
+  vcBarScreenSharing = !vcBarScreenSharing;
+  document.getElementById('vcBarScreen').textContent = vcBarScreenSharing ? '🛑' : '🖥';
+  document.getElementById('vcBarScreen').style.background = vcBarScreenSharing ? '#22d3a5' : '#232527';
+  document.getElementById('vcFrame').contentWindow?.postMessage(
+    { action: vcBarScreenSharing ? 'startScreen' : 'stopScreen' }, '*'
+  );
+}
+
+function vcBarExpand() {
+  const panel = document.getElementById('vcPanel');
+  if (panel.style.display === 'none') {
+    // Show the panel with the same room
+    document.getElementById('vcPanelFrame').src =
+      `tools/widget-vc.html?room=${encodeURIComponent(vcBarRoom)}&embedded=1&panel=1`;
+    panel.style.display = 'block';
+    document.getElementById('vcBar').querySelector('[onclick="vcBarExpand()"]').textContent = '⬇';
+  } else {
+    panel.style.display = 'none';
+    document.getElementById('vcBar').querySelector('[onclick="vcBarExpand()"]').textContent = '⬆';
+  }
+}
+
+function vcBarLeave() {
+  document.getElementById('vcFrame').contentWindow?.postMessage({ action: 'leave' }, '*');
+  closeVcBar();
+}
+
+// Listen for messages from the vc iframe
+window.addEventListener('message', e => {
+  const data = e.data || {};
+  if (data.source !== 'jmg-vc') return;
+  if (data.action === 'connected') {
+    document.getElementById('vcBarTimer').textContent = '00:00';
+    vcBarCallStart = Date.now();
+  }
+  if (data.action === 'left') closeVcBar();
+});
   
 async function pollNotifications() {
   if (notificationPollInFlight) return;
