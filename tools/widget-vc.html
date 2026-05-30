@@ -88,6 +88,21 @@
     `).join('');
   }
 
+  // Listen for control messages from parent (mute, screen, leave)
+  window.addEventListener('message', async e => {
+    const data = e.data || {};
+    if (data.action === 'mute' && micTrack) await micTrack.mute();
+    if (data.action === 'unmute' && micTrack) await micTrack.unmute();
+    if (data.action === 'startScreen') document.getElementById('btn-screen').click();
+    if (data.action === 'stopScreen') document.getElementById('btn-screen').click();
+    if (data.action === 'leave') document.getElementById('btn-leave').click();
+  });
+  
+  // Notify parent when connected
+  function notifyParent(action, extra) {
+    window.parent?.postMessage({ source: 'jmg-vc', action, ...extra }, '*');
+  }
+  
   async function join() {
     if (!room || !token) {
       setStatus('Missing room or not logged in.');
@@ -161,6 +176,7 @@
       }).catch(() => {});
       
       await livekitRoom.connect(data.url, data.token);
+      notifyParent('connected');
 
       // Add existing participants
       for (const p of livekitRoom.remoteParticipants.values()) {
@@ -223,6 +239,7 @@
   
     if (livekitRoom) await livekitRoom.disconnect();
     window.parent?.postMessage({ source: 'jmg-widget', action: 'vcLeft' }, '*');
+    notifyParent('left');
     window.close();
   };
 
