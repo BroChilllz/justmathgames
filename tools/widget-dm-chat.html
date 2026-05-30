@@ -79,6 +79,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   transition: all 0.15s;
 }
 .dm-btn-sm:hover { border-color: var(--red); color: var(--red); }
+.dm-btn-sm.call:hover { border-color: var(--green); color: var(--green); }
 
 /* First-conversation safety notice (like image 3) */
 .dm-safety-notice {
@@ -249,6 +250,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="dm-header-sub">Direct Message</div>
       </div>
       <div class="dm-header-actions">
+        <button class="dm-btn-sm call" id="dm-call-btn">📞 Call</button>
         <button class="dm-btn-sm" id="dm-remove-btn">Remove Friend</button>
       </div>
     </div>
@@ -367,8 +369,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     renderAvatar(document.getElementById('dm-hdr-av'), username);
     document.getElementById('dm-hdr-name').textContent = username;
     document.getElementById('dm-remove-btn').onclick   = () => removeFriend(username);
+    document.getElementById('dm-call-btn').onclick = () => startDmCall(username);
     loadMessages();
     pollTimer = setInterval(loadMessages, 1000);
+  }
+
+  function startDmCall(otherUsername) {
+    const room = 'dm:' + [me, otherUsername].sort().join(':');
+    window.open(
+      `tools/widget-vc.html?room=${encodeURIComponent(room)}`,
+      'vc_' + room,
+      'width=420,height=520,resizable=yes'
+    );
   }
 
   async function loadMessages() {
