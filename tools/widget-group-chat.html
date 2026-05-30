@@ -72,6 +72,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   transition: all 0.15s;
 }
 .gc-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.gc-btn-sm.call:hover { border-color: var(--green); color: var(--green); }
 .gc-btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
 
 .gc-messages {
@@ -358,6 +359,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     const isOwner = current.owner === me;
     document.getElementById('gc-hdr-actions').innerHTML = `
+      <button class="gc-btn-sm call" onclick="startGroupCall()">📞 Call</button>
       ${isOwner ? `<button class="gc-btn-sm" onclick="openAddModal()">+ Add Member</button>` : ''}
       <button class="gc-btn-sm danger" onclick="leaveOrDelete()">${isOwner ? 'Delete' : 'Leave'}</button>
     `;
@@ -365,6 +367,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     await loadMessages();
     pollTimer = setInterval(loadMessages, 1000);
   }
+
+  window.startGroupCall = function() {
+    if (!current) return;
+    const room = 'group:' + current.id;
+    window.open(
+      `tools/widget-vc.html?room=${encodeURIComponent(room)}`,
+      'vc_' + current.id,
+      'width=420,height=520,resizable=yes'
+    );
+  };
 
   async function loadMessages() {
     if (!current || !token) return;
