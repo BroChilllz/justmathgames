@@ -2665,6 +2665,8 @@ function rememberNotifiedMessage(id) {
 
 async function pollNotifications() {
   if (notificationPollInFlight) return;
+  // Pause polling when tab is hidden to save requests
+  if (document.hidden) return;
   notificationPollInFlight = true;
 
   try {
@@ -2680,16 +2682,16 @@ async function pollNotifications() {
       notifiedMessageIds.clear();
     }
 
-    const [friendData, groups, globalMessages] = await Promise.all([
-      fetchJson(`${BACKEND}/friends`, { headers }),
-      fetchJson(`${BACKEND}/groups`, { headers }),
-      fetchJson(`${BACKEND}/chat`, { headers })
-    ]);
-    if (!friendData) return;
+    // Use /social/summary — one request instead of 3 + N + M requests
+    const summary = await fetchJson(`${BACKEND}/social/summary`, { headers });
+    if (!summary) return;
 
-    const friends = friendData.friends || [];
-    const incoming = friendData.incoming || [];
-    const outgoing = friendData.outgoing || [];
+    const friends  = summary.friends  || [];
+    const incoming = summary.incoming || [];
+    const outgoing = summary.outgoing || [];
+    const groups   = summary.groups   || [];
+    const globalLastMessage = summary.globalLastMessage;
+
     const stateWasReady = Boolean(notificationState?.ready && notificationState.user === me);
     const nextState = {
       ready: true,
@@ -2723,34 +2725,17 @@ async function pollNotifications() {
       }
     }
 
-    const messageJobs = [];
-    const globalLatest = latestMessage(globalMessages);
-    if (globalLatest) messageJobs.push({ key: "global", label: "Global Chat", message: globalLatest });
+    // Process last messages from summary (no fan-out needed)
+    const dmLastMessages   = summary.dmLastMessages   || {};
+    const groupLastMessages = summary.groupLastMessages || {};
 
-    for (const friend of friends) {
-      messageJobs.push(
-        fetchJson(`${BACKEND}/dm/${encodeURIComponent(friend)}`, { headers })
-          .then(messages => ({
-            key: `dm:${friend}`,
-            label: friend,
-            message: latestMessage(messages)
-          }))
-      );
-    }
+    const allItems = [
+      globalLastMessage ? { key: "global", label: "Global Chat", message: globalLastMessage } : null,
+      ...friends.map(u => ({ key: `dm:${u}`, label: u, message: dmLastMessages[u] || null })),
+      ...groups.map(g => ({ key: `group:${g._id}`, label: g.name || "Group chat", message: groupLastMessages[String(g._id)] || null }))
+    ].filter(Boolean);
 
-    for (const group of Array.isArray(groups) ? groups : []) {
-      messageJobs.push(
-        fetchJson(`${BACKEND}/groups/${group._id}/messages`, { headers })
-          .then(messages => ({
-            key: `group:${group._id}`,
-            label: group.name || "Group chat",
-            message: latestMessage(messages)
-          }))
-      );
-    }
-
-    const latestItems = await Promise.all(messageJobs);
-    for (const item of latestItems) {
+    for (const item of allItems) {
       const message = item?.message;
       if (!message?._id) continue;
       const sender = message.username || message.from || "";
@@ -2778,7 +2763,12 @@ async function pollNotifications() {
 function startNotificationPolling() {
   if (notificationPollTimer) return;
   pollNotifications();
-  notificationPollTimer = setInterval(pollNotifications, 1000);
+  // 5 seconds is plenty — notifications don't need sub-second latency
+  notificationPollTimer = setInterval(pollNotifications, 5000);
+  // Resume polls immediately when tab becomes visible again
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) pollNotifications();
+  });
 }
 
 // ================================================================
