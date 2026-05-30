@@ -284,7 +284,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     try {
       const r = await fetch(`${BACKEND}/friends`, { headers: { Authorization:`Bearer ${token}` } });
       const data = await r.json();
-      await Promise.all([...(data.incoming || []), ...(data.outgoing || [])].map(fetchProfile));
+  
+      // Use profiles already returned by /friends — no extra fetches needed
+      profileCache = { ...profileCache, ...(data.profiles || {}) };
+  
+      // Only fetch profiles the server didn't include
+      const allUsernames = [...(data.incoming || []), ...(data.outgoing || [])];
+      const missing = allUsernames.filter(u => !profileCache[u]);
+      if (missing.length) {
+        await Promise.all(missing.map(fetchProfile));
+      }
+  
       renderIncoming(data.incoming || []);
       renderOutgoing(data.outgoing || []);
     } catch {
@@ -390,7 +400,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   });
 
   load();
-  setInterval(load, 1000);
+  setInterval(load, 2500);
 })();
 </script>
 </body>
