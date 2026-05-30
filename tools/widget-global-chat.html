@@ -376,7 +376,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       if (!r.ok) return;
       const msgs = await r.json();
       const senders = [...new Set(msgs.map(msg => msg.username || msg.from).filter(Boolean))];
-      await Promise.all(senders.map(fetchProfile));
+      await Promise.all(
+        senders
+          .filter(s => !profileCache[s])  // ← only fetch uncached profiles
+          .map(fetchProfile)
+      );
       renderMessages(msgs);
     } catch {}
   }
