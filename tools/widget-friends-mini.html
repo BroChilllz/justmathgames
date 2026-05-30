@@ -309,83 +309,72 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   }
 
   async function render() {
-    const list = document.getElementById('mf-list');
+    const list  = document.getElementById('mf-list');
     const count = document.getElementById('mf-count');
-    const items = [];
-    const globalMsg = await fetchLastGlobalMsg();
-
-    items.push({
-      type: 'global',
-      id: 'global',
-      name: 'Global Chat',
-      lastText: globalMsg ? ((globalMsg.username || globalMsg.from || 'Someone') + ': ') + globalMsg.text : 'Everyone can chat here',
-      lastTime: globalMsg ? globalMsg.createdAt : null,
-      unread: false
-    });
-
-    if (!token || !me) {
-      count.textContent = '1';
-      list.innerHTML = items.map(renderItem).join('') + '<div class="mf-empty">Log in to see friends and groups</div>';
-      return;
-    }
-
-    // Fetch friends
-    const [friendsRes, groupsRes] = await Promise.all([
-      fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } }),
-      fetch(`${BACKEND}/groups`,  { headers:{ Authorization:`Bearer ${token}` } })
-    ]);
-    const friendData = await friendsRes.json();
-    const groups     = await groupsRes.json();
-    profileCache = { ...profileCache, ...(friendData.profiles || {}) };
-
-    const friends = friendData.friends || [];
-    count.textContent = `${friends.length + groups.length + 1}`;
-    await Promise.all(friends.slice(0,8).map(fetchProfile));
-
-    // Friends (DMs)
-    for (const u of friends.slice(0,8)) {
-      const msg = await fetchLastDm(u);
+  
+    try {
+      let data;
+      if (token && me) {
+        const r = await fetch(`${BACKEND}/social/summary`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        data = await r.json();
+      } else {
+        // Guests: just fetch global chat last message
+        const r = await fetch(`${BACKEND}/chat`);
+        const msgs = await r.json();
+        data = { friends: [], groups: [], incoming: [], outgoing: [],
+                 profiles: {}, dmLastMessages: {}, groupLastMessages: {},
+                 globalLastMessage: msgs.length ? msgs[msgs.length - 1] : null };
+      }
+  
+      profileCache = { ...profileCache, ...(data.profiles || {}) };
+  
+      const items = [];
+  
+      // Global chat
+      const gm = data.globalLastMessage;
       items.push({
-        type: 'dm',
-        id: u,
-        name: u,
-        lastText: msg ? (msg.from === me ? 'You: ' : '') + msg.text : profileStatus(u).statusText,
-        lastTime: msg ? msg.createdAt : null,
-        unread: false,
-        statusClass: profileStatus(u).statusClass,
-        online: profileStatus(u).online
+        type: 'global', id: 'global', name: 'Global Chat',
+        lastText: gm ? `${gm.username || gm.from || 'Someone'}: ${gm.text}` : 'Everyone can chat here',
+        lastTime: gm ? gm.createdAt : null, unread: false
       });
-    }
-
-    // Groups
-    for (const g of groups.slice(0,4)) {
-      const msg = await fetchLastGroupMsg(g._id);
-      const sender = msg ? (msg.username || msg.from || 'Someone') : '';
-      items.push({
-        type: 'group',
-        id: g._id,
-        name: g.name,
-        lastText: msg ? (sender === me ? 'You: ' : sender + ': ') + msg.text : 'No messages yet',
-        lastTime: msg ? msg.createdAt : null,
-        unread: false,
-        members: g.members.length
+  
+      // Friends (DMs)
+      for (const u of (data.friends || []).slice(0, 8)) {
+        const msg = data.dmLastMessages[u];
+        items.push({
+          type: 'dm', id: u, name: u,
+          lastText: msg ? (msg.from === me ? 'You: ' : '') + msg.text : profileStatus(u).statusText,
+          lastTime: msg ? msg.createdAt : null, unread: false,
+          statusClass: profileStatus(u).statusClass,
+          online: profileStatus(u).online
+        });
+      }
+  
+      // Groups
+      for (const g of (data.groups || [])) {
+        const msg = data.groupLastMessages[String(g._id)];
+        const sender = msg ? (msg.username || msg.from || 'Someone') : '';
+        items.push({
+          type: 'group', id: g._id, name: g.name,
+          lastText: msg ? (sender === me ? 'You: ' : sender + ': ') + msg.text : 'No messages yet',
+          lastTime: msg ? msg.createdAt : null, unread: false, members: g.members.length
+        });
+      }
+  
+      items.sort((a, b) => {
+        if (!a.lastTime && !b.lastTime) return 0;
+        if (!a.lastTime) return 1;
+        if (!b.lastTime) return -1;
+        return new Date(b.lastTime) - new Date(a.lastTime);
       });
+  
+      count.textContent = `${items.length}`;
+      list.innerHTML = items.length ? items.map(renderItem).join('') : '<div class="mf-empty">No friends yet</div>';
+    } catch {
+      list.innerHTML = '<div class="mf-empty">Could not load</div>';
     }
-
-    // Sort by lastTime desc
-    items.sort((a,b) => {
-      if (!a.lastTime && !b.lastTime) return 0;
-      if (!a.lastTime) return 1;
-      if (!b.lastTime) return -1;
-      return new Date(b.lastTime) - new Date(a.lastTime);
-    });
-
-    if (!items.length) {
-      list.innerHTML = '<div class="mf-empty">No friends yet</div>';
-      return;
-    }
-
-    list.innerHTML = items.map(renderItem).join('');
   }
 
   function renderItem(item) {
