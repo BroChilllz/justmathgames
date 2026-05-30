@@ -376,11 +376,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
   function startDmCall(otherUsername) {
     const room = 'dm:' + [me, otherUsername].sort().join(':');
-    window.open(
-      `tools/widget-vc.html?room=${encodeURIComponent(room)}`,
-      'vc_' + room,
-      'width=420,height=520,resizable=yes'
-    );
+    window.parent.postMessage({
+      source: 'jmg-widget',
+      action: 'startCall',
+      room,
+      label: `📞 ${otherUsername}`
+    }, '*');
   }
 
   async function loadMessages() {
