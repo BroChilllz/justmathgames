@@ -534,17 +534,27 @@ html.row-mode .fl-loading {
     try {
       const fr = await fetch(`${BACKEND}/friends`, { headers:{ Authorization:`Bearer ${token}` } });
       const fd = await fr.json();
+  
+      // Merge profiles from the /friends response — no extra fetches needed for these
       profileCache = { ...profileCache, ...(fd.profiles || {}) };
+  
       incomingRequests = fd.incoming || [];
       outgoingRequests = fd.outgoing || [];
       allFriends = (fd.friends || []).map(username => normalizeFriend({
         username,
         ...(profileCache[username] || {})
       })).filter(friend => friend.username);
-      await Promise.all([...allFriends.map(friend => friend.username), ...incomingRequests, ...outgoingRequests].map(fetchProfile));
+  
+      // Only fetch profiles that weren't already included in fd.profiles
+      const allUsernames = [...allFriends.map(f => f.username), ...incomingRequests, ...outgoingRequests];
+      const missing = allUsernames.filter(u => !profileCache[u]);
+      if (missing.length) {
+        await Promise.all(missing.map(fetchProfile));
+      }
+  
       renderGrid();
     } catch {
-      document.getElementById('fl-grid').innerHTML = '<div class="fl-empty">Could not load friends</div>';
+      document.getElementById('fl-grid').innerHTML = '<div class=\"fl-empty\">Could not load friends</div>';
     }
   }
 
@@ -616,7 +626,7 @@ html.row-mode .fl-loading {
 
   load();
   if (focusMode === 'add') setTimeout(() => document.getElementById('fl-add-input')?.focus(), 0);
-  setInterval(load, 1000);
+  setInterval(load, 2500);
 })();
 </script>
 </body>
