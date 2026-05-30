@@ -370,12 +370,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
   window.startGroupCall = function() {
     if (!current) return;
-    const room = 'group:' + current.id;
-    window.open(
-      `tools/widget-vc.html?room=${encodeURIComponent(room)}`,
-      'vc_' + current.id,
-      'width=420,height=520,resizable=yes'
-    );
+    window.parent.postMessage({
+      source: 'jmg-widget',
+      action: 'startCall',
+      room: 'group:' + current.id,
+      label: `📞 ${current.name}`
+    }, '*');
   };
 
   async function loadMessages() {
