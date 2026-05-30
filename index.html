@@ -1524,6 +1524,18 @@ body.has-active-overlay .toast-stack {
 
 </div>
 
+<div id="incomingCallBanner" style="display:none;position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:#191b1f;border:1px solid #22d3a5;border-radius:14px;padding:16px 20px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);display:none;flex-direction:column;gap:10px;min-width:260px;">
+  <div style="font-size:13px;font-weight:600;color:#f2f4f5" id="incomingCallText">📞 Incoming call...</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="answerCall()" style="flex:1;padding:8px;border-radius:8px;border:none;
+      background:#22d3a5;color:#121215;font-weight:700;font-size:13px;cursor:pointer">Answer</button>
+    <button onclick="declineCall()" style="flex:1;padding:8px;border-radius:8px;
+      border:1px solid #f85a5a;background:transparent;color:#f85a5a;font-weight:700;font-size:13px;cursor:pointer">Decline</button>
+  </div>
+</div>
+
 <!-- SCRIPT -->
 <script>
 const search = document.querySelector(".search");
@@ -2663,6 +2675,57 @@ function rememberNotifiedMessage(id) {
   return alreadySeen;
 }
 
+let pendingCall = null;
+let callRingtone = null;
+
+function showIncomingCall(call) {
+  if (pendingCall?.room === call.room) return; // already showing
+  pendingCall = call;
+
+  const banner = document.getElementById('incomingCallBanner');
+  const isGroup = call.room.startsWith('group:');
+  document.getElementById('incomingCallText').textContent =
+    `📞 ${call.caller} is calling${isGroup ? ' the group' : ' you'}...`;
+  banner.style.display = 'flex';
+
+  // Play a ringtone using the Web Audio API — no file needed
+  try {
+    const ctx = new AudioContext();
+    callRingtone = setInterval(() => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 520;
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.4);
+    }, 1000);
+  } catch {}
+}
+
+function hideIncomingCall() {
+  pendingCall = null;
+  document.getElementById('incomingCallBanner').style.display = 'none';
+  clearInterval(callRingtone);
+  callRingtone = null;
+}
+
+window.answerCall = function() {
+  if (!pendingCall) return;
+  const room = pendingCall.room;
+  hideIncomingCall();
+  window.open(
+    `tools/widget-vc.html?room=${encodeURIComponent(room)}`,
+    'vc_' + room,
+    'width=420,height=520,resizable=yes'
+  );
+};
+
+window.declineCall = function() {
+  hideIncomingCall();
+};
+  
 async function pollNotifications() {
   if (notificationPollInFlight) return;
   // Pause polling when tab is hidden to save requests
@@ -2754,6 +2817,13 @@ async function pollNotifications() {
     }
 
     notificationState = nextState;
+    // Check for incoming calls
+    const callData = await fetchJson(`${BACKEND}/vc/calls`, { headers });
+    if (callData?.calls?.length) {
+      showIncomingCall(callData.calls[0]);
+    } else {
+      hideIncomingCall();
+    }
   } catch {
   } finally {
     notificationPollInFlight = false;
