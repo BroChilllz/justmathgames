@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Bridge - JustMathGames</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #121215;
+      --surface: #191b1f;
+      --surface2: #232527;
+      --surface3: #2b2d33;
+      --border: #34373d;
+      --text: #f2f4f5;
+      --muted: #b8b8b8;
+      --link: #00a2ff;
+      --danger: #f85a5a;
+      --green: #22d3a5;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Builder Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .auth-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .auth-panel {
+      width: min(420px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.42);
+    }
+
+    .brand {
+      margin-bottom: 20px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .brand-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label,
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--surface2);
+      color: var(--text);
+      outline: none;
+    }
+
+    input,
+    select {
+      height: 38px;
+      padding: 0 11px;
+    }
+
+    textarea {
+      min-height: 42px;
+      max-height: 140px;
+      padding: 10px 12px;
+      resize: none;
+      line-height: 1.4;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #5f626a;
+    }
+
+    details {
+      margin: 2px 0 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    summary {
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      user-select: none;
+    }
+
+    .error {
+      min-height: 18px;
+      margin-bottom: 12px;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text);
+      min-height: 36px;
+      padding: 0 14px;
+      font-weight: 700;
+    }
+
+    .btn:hover {
+      border-color: #5f626a;
+      background: var(--surface2);
+    }
+
+    .btn-primary {
+      border: 0;
+      background: var(--text);
+      color: #191b1f;
+    }
+
+    .btn-primary:hover {
+      background: #dfe2e6;
+    }
+
+    .btn-danger:hover {
+      border-color: rgba(248,90,90,0.6);
+      color: var(--danger);
+    }
+
+    .app {
+      display: none;
+      height: 100vh;
+      min-height: 0;
+    }
+
+    .app.is-open {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-rows: 52px minmax(0, 1fr);
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      height: 52px;
+      padding: 0 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .top-left {
+      min-width: 0;
+    }
+
+    .top-title {
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-sub {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .sidebar {
+      min-height: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-head .field {
+      margin-bottom: 0;
+    }
+
+    .channels {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    .channel-btn {
+      width: 100%;
+      border: 0;
+      border-left: 2px solid transparent;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 36px;
+      padding: 8px 14px 8px 12px;
+      text-align: left;
+    }
+
+    .channel-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .channel-btn.active {
+      background: var(--surface2);
+      border-left-color: var(--text);
+      color: var(--text);
+    }
+
+    .channel-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .channel-state {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .main {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 16px 18px;
+    }
+
+    .day {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      margin: 14px 0 10px;
+    }
+
+    .day::before,
+    .day::after {
+      content: "";
+      height: 1px;
+      background: var(--border);
+      flex: 1;
+    }
+
+    .message {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 10px;
+      padding: 5px 6px;
+      border-radius: 8px;
+    }
+
+    .message:hover {
+      background: rgba(255,255,255,0.025);
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      margin-bottom: 3px;
+    }
+
+    .author {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .badge,
+    .time {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .source {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 1px 7px;
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .source.website {
+      color: var(--green);
+      border-color: rgba(34,211,165,0.36);
+    }
+
+    .text {
+      color: var(--text);
+      line-height: 1.48;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    .attachments {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: flex-start;
+    }
+
+    .attachments a {
+      color: var(--link);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .attachments a:hover {
+      text-decoration: underline;
+    }
+
+    .attachments img {
+      max-width: min(420px, 100%);
+      max-height: 280px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      background: var(--surface);
+    }
+
+    .empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .composer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: minmax(160px, 230px) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .composer select {
+      height: 42px;
+    }
+
+    .composer .btn-primary {
+      min-height: 42px;
+      padding: 0 20px;
+    }
+
+    @media (max-width: 760px) {
+      .app.is-open {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 160px minmax(0, 1fr);
+      }
+
+      .topbar {
+        height: auto;
+        min-height: 52px;
+        align-items: flex-start;
+        padding: 10px 12px;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .composer {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="auth-gate" id="authGate">
+    <form class="auth-panel" id="authForm">
+      <div class="brand">
+        <div class="brand-title">Discord Bridge</div>
+        <div class="brand-sub" id="authStatus">Locked</div>
+      </div>
+
+      <div class="field">
+        <label for="displayNameInput">Display name</label>
+        <input id="displayNameInput" maxlength="32" autocomplete="nickname">
+      </div>
+
+      <div class="field">
+        <label for="passwordInput">Password</label>
+        <input id="passwordInput" type="password" autocomplete="current-password">
+      </div>
+
+      <details>
+        <summary>Connection</summary>
+        <div class="field" style="margin-top:12px;">
+          <label for="apiInput">Bridge API</label>
+          <input id="apiInput" autocomplete="off" spellcheck="false">
+        </div>
+      </details>
+
+      <div class="error" id="authError"></div>
+      <div class="button-row">
+        <button class="btn btn-primary" id="authButton" type="submit">Unlock</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="app" id="app">
+    <header class="topbar">
+      <div class="top-left">
+        <div class="top-title" id="guildTitle">Discord Bridge</div>
+        <div class="top-sub" id="bridgeStatus">Connecting</div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" type="button" id="refreshButton">Refresh</button>
+        <button class="btn btn-danger" type="button" id="logoutButton">Lock</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="field">
+          <label for="filterInput">Filter</label>
+          <input id="filterInput" placeholder="Channel name" autocomplete="off">
+        </div>
+      </div>
+      <nav class="channels" id="channelList"></nav>
+    </aside>
+
+    <main class="main">
+      <div class="messages" id="messages"></div>
+      <form class="composer" id="messageForm">
+        <select id="sendChannelSelect" aria-label="Send channel"></select>
+        <textarea id="messageInput" maxlength="500" placeholder="Message" rows="1"></textarea>
+        <button class="btn btn-primary" id="sendButton" type="submit">Send</button>
+      </form>
+    </main>
+  </section>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+    const defaultApi = (location.protocol === 'file:' || localHosts.has(location.hostname))
+      ? 'http://localhost:3100'
+      : 'https://gamblingdomain.onrender.com';
+
+    let apiBase = normalizeApi(params.get('api') || localStorage.getItem('jmg_discord_bridge_api') || defaultApi);
+    let token = sessionStorage.getItem('jmg_discord_bridge_token') || '';
+    let displayName = localStorage.getItem('jmg_discord_bridge_name') || localStorage.getItem('jmg_username') || 'Website';
+    let channels = [];
+    let activeChannelId = localStorage.getItem('jmg_discord_bridge_filter') || 'all';
+    let sendChannelId = localStorage.getItem('jmg_discord_bridge_send_channel') || '';
+    let pollTimer = null;
+    let authExpired = false;
+
+    $('apiInput').value = apiBase;
+    $('displayNameInput').value = displayName;
+
+    function normalizeApi(value) {
+      return String(value || '').trim().replace(/\/+$/, '');
+    }
+
+    function setError(message) {
+      $('authError').textContent = message || '';
+    }
+
+    function setBridgeStatus(message) {
+      $('bridgeStatus').textContent = message;
+      $('authStatus').textContent = message;
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = {
+        ...(options.headers || {})
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+      const response = await fetch(`${apiBase}${path}`, {
+        ...options,
+        headers
+      });
+
+      if (response.status === 401 && token) {
+        sessionStorage.removeItem('jmg_discord_bridge_token');
+        token = '';
+        authExpired = true;
+        showAuth();
+      }
+
+      return response;
+    }
+
+    async function readJson(response) {
+      try {
+        return await response.json();
+      } catch {
+        return {};
+      }
+    }
+
+    async function loadStatus() {
+      try {
+        const response = await fetch(`${apiBase}/api/status`);
+        const data = await readJson(response);
+        if (!response.ok) throw new Error(data.error || 'Status unavailable');
+        $('guildTitle').textContent = data.guildName || 'Discord Bridge';
+        setBridgeStatus(data.ready ? `${data.channelCount || 0} channels linked` : 'Bot starting');
+        return data;
+      } catch (err) {
+        setBridgeStatus('Bridge unavailable');
+        if (!token) $('authStatus').textContent = 'Bridge unavailable';
+        return null;
+      }
+    }
+
+    async function authenticate(event) {
+      event.preventDefault();
+      setError('');
+      apiBase = normalizeApi($('apiInput').value || defaultApi);
+      displayName = $('displayNameInput').value.trim() || 'Website';
+      const password = $('passwordInput').value;
+      if (!password) {
+        setError('Password required');
+        return;
+      }
+
+      $('authButton').disabled = true;
+      try {
+        const response = await fetch(`${apiBase}/api/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password, displayName })
+        });
+        const data = await readJson(response);
+        if (!response.ok) {
+          setError(data.error || 'Invalid password');
+          return;
+        }
+
+        token = data.token;
+        authExpired = false;
+        sessionStorage.setItem('jmg_discord_bridge_token', token);
+        localStorage.setItem('jmg_discord_bridge_name', displayName);
+        localStorage.setItem('jmg_discord_bridge_api', apiBase);
+        $('passwordInput').value = '';
+        await showApp();
+      } catch {
+        setError('Could not reach bridge API');
+      } finally {
+        $('authButton').disabled = false;
+      }
+    }
+
+    function showAuth() {
+      clearPoll();
+      $('app').classList.remove('is-open');
+      $('authGate').style.display = 'flex';
+      $('apiInput').value = apiBase;
+      $('displayNameInput').value = displayName;
+      setError(authExpired ? 'Session expired' : '');
+    }
+
+    async function showApp() {
+      $('authGate').style.display = 'none';
+      $('app').classList.add('is-open');
+      await loadStatus();
+      await loadChannels();
+      await loadMessages();
+      clearPoll();
+      pollTimer = setInterval(loadMessages, 2500);
+      $('messageInput').focus();
+    }
+
+    function clearPoll() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    async function loadChannels() {
+      const response = await apiFetch('/api/channels');
+      const data = await readJson(response);
+      if (!response.ok) return;
+      channels = Array.isArray(data.channels) ? data.channels : [];
+      if (!channels.some(channel => channel.id === activeChannelId)) activeChannelId = 'all';
+      if (!channels.some(channel => channel.id === sendChannelId && channel.canSend)) {
+        sendChannelId = data.defaultChannelId || channels.find(channel => channel.canSend)?.id || '';
+      }
+      localStorage.setItem('jmg_discord_bridge_send_channel', sendChannelId);
+      $('guildTitle').textContent = data.guildName || 'Discord Bridge';
+      renderChannels();
+      renderSendChannels();
+    }
+
+    function renderChannels() {
+      const query = $('filterInput').value.trim().toLowerCase();
+      const list = $('channelList');
+      list.innerHTML = '';
+
+      const allButton = makeChannelButton({
+        id: 'all',
+        name: 'All server',
+        canSend: false
+      });
+      list.appendChild(allButton);
+
+      channels
+        .filter(channel => !query || channel.name.toLowerCase().includes(query))
+        .forEach(channel => list.appendChild(makeChannelButton(channel)));
+    }
+
+    function makeChannelButton(channel) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `channel-btn${activeChannelId === channel.id ? ' active' : ''}`;
+
+      const name = document.createElement('span');
+      name.className = 'channel-name';
+      name.textContent = channel.id === 'all' ? channel.name : `# ${channel.name}`;
+
+      const state = document.createElement('span');
+      state.className = 'channel-state';
+      state.textContent = channel.id === 'all' ? 'feed' : (channel.canSend ? 'send' : 'read');
+
+      button.append(name, state);
+      button.addEventListener('click', () => {
+        activeChannelId = channel.id;
+        localStorage.setItem('jmg_discord_bridge_filter', activeChannelId);
+        renderChannels();
+        loadMessages();
+      });
+      return button;
+    }
+
+    function renderSendChannels() {
+      const select = $('sendChannelSelect');
+      select.innerHTML = '';
+      channels
+        .filter(channel => channel.canSend)
+        .forEach(channel => {
+          const option = document.createElement('option');
+          option.value = channel.id;
+          option.textContent = `# ${channel.name}`;
+          select.appendChild(option);
+        });
+
+      select.value = sendChannelId;
+      $('sendButton').disabled = !select.value;
+      $('messageInput').disabled = !select.value;
+    }
+
+    async function loadMessages() {
+      if (!token) return;
+      const container = $('messages');
+      const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+      const response = await apiFetch(`/api/messages?channelId=${encodeURIComponent(activeChannelId)}&limit=200`);
+      const data = await readJson(response);
+      if (!response.ok) return;
+      renderMessages(data.messages || []);
+      if (wasAtBottom) container.scrollTop = container.scrollHeight;
+    }
+
+    function renderMessages(messages) {
+      const container = $('messages');
+      container.innerHTML = '';
+
+      if (!messages.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No messages';
+        container.appendChild(empty);
+        return;
+      }
+
+      let lastDay = '';
+      messages.forEach(message => {
+        const createdAt = new Date(message.createdAt);
+        const day = createdAt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        if (day !== lastDay) {
+          const dayEl = document.createElement('div');
+          dayEl.className = 'day';
+          dayEl.textContent = day;
+          container.appendChild(dayEl);
+          lastDay = day;
+        }
+        container.appendChild(renderMessage(message, createdAt));
+      });
+    }
+
+    function renderMessage(message, createdAt) {
+      const row = document.createElement('article');
+      row.className = 'message';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      if (message.authorAvatar) {
+        const img = document.createElement('img');
+        img.src = message.authorAvatar;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => {
+          avatar.textContent = initial(message.authorName);
+          img.remove();
+        };
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = initial(message.authorName);
+      }
+
+      const body = document.createElement('div');
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+
+      const author = document.createElement('span');
+      author.className = 'author';
+      author.textContent = message.authorName || 'Unknown';
+
+      const channel = document.createElement('span');
+      channel.className = 'badge';
+      channel.textContent = `# ${message.channelName || 'unknown'}`;
+
+      const source = document.createElement('span');
+      source.className = `source ${message.source === 'website' ? 'website' : ''}`;
+      source.textContent = message.source === 'website' ? 'web' : 'discord';
+
+      const time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = createdAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+      meta.append(author, channel, source, time);
+
+      const text = document.createElement('div');
+      text.className = 'text';
+      text.textContent = message.text || '';
+      if (!message.text && (!message.attachments || !message.attachments.length)) {
+        text.textContent = '[empty message]';
+      }
+
+      body.append(meta, text);
+      if (message.attachments && message.attachments.length) {
+        body.appendChild(renderAttachments(message.attachments));
+      }
+
+      row.append(avatar, body);
+      return row;
+    }
+
+    function renderAttachments(attachments) {
+      const wrap = document.createElement('div');
+      wrap.className = 'attachments';
+      attachments.forEach(attachment => {
+        if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+          const link = document.createElement('a');
+          link.href = attachment.url;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          const img = document.createElement('img');
+          img.src = attachment.url;
+          img.alt = attachment.name || 'Attachment';
+          link.appendChild(img);
+          wrap.appendChild(link);
+          return;
+        }
+        const link = document.createElement('a');
+        link.href = attachment.url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = attachment.name || attachment.url;
+        wrap.appendChild(link);
+      });
+      return wrap;
+    }
+
+    function initial(name) {
+      return String(name || '?').trim().slice(0, 1).toUpperCase() || '?';
+    }
+
+    async function sendMessage(event) {
+      event.preventDefault();
+      const text = $('messageInput').value.trim();
+      const channelId = $('sendChannelSelect').value;
+      if (!text || !channelId) return;
+
+      $('sendButton').disabled = true;
+      try {
+        const response = await apiFetch('/api/messages', {
+          method: 'POST',
+          body: JSON.stringify({
+            channelId,
+            displayName,
+            text
+          })
+        });
+        const data = await readJson(response);
+        if (!response.ok) {
+          alert(data.error || 'Could not send message');
+          return;
+        }
+        $('messageInput').value = '';
+        $('messageInput').style.height = 'auto';
+        await loadMessages();
+        $('messages').scrollTop = $('messages').scrollHeight;
+      } catch {
+        alert('Could not send message');
+      } finally {
+        $('sendButton').disabled = !$('sendChannelSelect').value;
+        $('messageInput').focus();
+      }
+    }
+
+    async function refreshBridge() {
+      $('refreshButton').disabled = true;
+      try {
+        await apiFetch('/api/refresh', { method: 'POST' });
+        await loadStatus();
+        await loadChannels();
+        await loadMessages();
+      } finally {
+        $('refreshButton').disabled = false;
+      }
+    }
+
+    async function logout() {
+      try {
+        await apiFetch('/api/logout', { method: 'POST' });
+      } catch {}
+      sessionStorage.removeItem('jmg_discord_bridge_token');
+      token = '';
+      authExpired = false;
+      showAuth();
+    }
+
+    $('authForm').addEventListener('submit', authenticate);
+    $('messageForm').addEventListener('submit', sendMessage);
+    $('refreshButton').addEventListener('click', refreshBridge);
+    $('logoutButton').addEventListener('click', logout);
+    $('filterInput').addEventListener('input', renderChannels);
+    $('sendChannelSelect').addEventListener('change', event => {
+      sendChannelId = event.target.value;
+      localStorage.setItem('jmg_discord_bridge_send_channel', sendChannelId);
+      $('sendButton').disabled = !sendChannelId;
+      $('messageInput').disabled = !sendChannelId;
+    });
+    $('messageInput').addEventListener('input', event => {
+      event.target.style.height = 'auto';
+      event.target.style.height = Math.min(event.target.scrollHeight, 140) + 'px';
+    });
+    $('messageInput').addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        $('messageForm').requestSubmit();
+      }
+    });
+
+    loadStatus();
+    if (token) {
+      showApp();
+    }
+  </script>
+</body>
+</html>
