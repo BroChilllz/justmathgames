@@ -795,7 +795,7 @@ function closeDetailIfBackdrop(e) {
 function openPlayer(tmdbId, title) {
   closeDetail();
   document.getElementById('playerTitle').textContent = title;
-  document.getElementById('playerFrame').src = `https://vidsrcme.ru/embed/movie?tmdb=${tmdbId}`;
+  document.getElementById('playerFrame').src = `https://player.videasy.to/movie/${tmdbId}`;
   document.getElementById('playerOverlay').classList.add('open');
 }
 
