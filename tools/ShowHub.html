@@ -899,7 +899,7 @@ function openPlayerDirect(showId, title, season, ep, seasons) {
   playerCurrentEp = ep;
 
   document.getElementById('playerTitle').textContent = `${title} — S${String(season).padStart(2,'0')}E${String(ep).padStart(2,'0')}`;
-  document.getElementById('playerFrame').src = `https://vidsrcme.ru/embed/tv?tmdb=${showId}&season=${season}&episode=${ep}`;
+  document.getElementById('playerFrame').src = `https://player.videasy.to/tv?tmdb=${showId}&season=${season}&episode=${ep}`;
   document.getElementById('playerOverlay').classList.add('open');
 
   // Populate in-player season/ep controls if we have seasons data
